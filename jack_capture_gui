@@ -1,0 +1,37 @@
+#!/bin/bash
+#script for using a graphical dialog to jack_capture. Written by Svend-Erik Kjær Madsen
+
+#This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program; if not, write to the Free Software
+#    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+
+OPTIONS=$@
+
+if [ ! `which Xdialog` ] ; then 
+    echo "Xdialog needed";
+    exit;
+fi
+
+while true
+do
+  Xdialog --stdout --yesno "PRESS YES TO START REC"  10 40
+  case "$?" in
+    0) jack_capture $OPTIONS | Xdialog --stdout --msgbox " RECORDING IN PROGRESS\n PRESS OK TO STOP REC " 10 40
+       echo "Recording stopped"
+    ;;
+    1) Xdialog --msgbox "Ok no recording started" 10 40
+       exit;
+    ;;
+  esac
+done
