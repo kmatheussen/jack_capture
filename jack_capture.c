@@ -972,7 +972,7 @@ static int stdout_write(sample_t *buffer,size_t frames){
   }
 
   {
-    unsigned i;
+    unsigned int i;
     int writeplace=0;
     for(i=0;i<frames*num_channels;i++){
       int d = (int) rint(buffer[i]*32767.0);
