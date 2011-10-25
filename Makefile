@@ -11,7 +11,7 @@ CPP=g++
 OPTIMIZE=-O3 -mtune=native
 #OPTIMIZE=-O0 -g
 
-COMPILEFLAGS=$(OPTIMIZE) -DVERSION=\"$(VERSION)\" -Wall
+COMPILEFLAGS=$(OPTIMIZE) -DVERSION=\"$(VERSION)\" -Wall -Wextra -Wno-unused
 LINKFLAGS=-ljack -lsndfile -lm -lpthread
 
 targets = jack_capture

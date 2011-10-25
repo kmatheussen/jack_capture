@@ -63,7 +63,7 @@
 
 #define OPTARGS_CHECK_GET(wrong,right) lokke==argc-1?(fprintf(stderr,"Must supply argument for '%s'\n",argv[lokke]),exit(-4),wrong):right
 
-#define OPTARGS_BEGIN(das_usage) {int lokke;const char *usage=das_usage;for(lokke=1;lokke<argc;lokke++){char *a=argv[lokke];if(!strcmp("--help",a)||!strcmp("-h",a)){fprintf(stderr,usage);exit(0);
+#define OPTARGS_BEGIN(das_usage) {int lokke;const char *usage=das_usage;for(lokke=1;lokke<argc;lokke++){char *a=argv[lokke];if(!strcmp("--help",a)||!strcmp("-h",a)){fprintf(stderr,"%s",usage);exit(0);
 #define OPTARG(name,name2) }}else if(!strcmp(name,a)||!strcmp(name2,a)){{
 #define OPTARG_GETINT() OPTARGS_CHECK_GET(0,atoi(argv[++lokke]))
 //int optargs_inttemp;
@@ -72,7 +72,7 @@
 #define OPTARG_GETSTRING() OPTARGS_CHECK_GET("",argv[++lokke])
 #define OPTARG_LAST() }}else if(lokke==argc-1 && argv[lokke][0]!='-'){lokke--;{
 #define OPTARGS_ELSE() }else if(1){
-#define OPTARGS_END }else{fprintf(stderr,usage);exit(-1);}}}
+#define OPTARGS_END }else{fprintf(stderr,"%s",usage);exit(-1);}}}
 
 
 
@@ -404,7 +404,7 @@ static void portnames_add(char *name){
   if(name[strlen(name)-1]=='*'){
     char pattern[strlen(name)];
 
-    sprintf(pattern,name);
+    sprintf("%s",pattern,name);
 
     pattern[strlen(name)-1]=0;
 
@@ -673,7 +673,7 @@ static void *helper_thread_func(void *arg){
 	}
       }
       printf(MESSAGE_PREFIX); 
-      printf(message_string);
+      printf("%s",message_string);
       message_string[0]=0;
       move_cursor_to_top_doit=false;
       if(use_vu || show_bufferusage)
@@ -817,7 +817,7 @@ static int open_mp3file(void){
 static int open_soundfile(void){
   int subformat;
 
-  SF_INFO sf_info={0};
+  SF_INFO sf_info; memset(&sf_info,0,sizeof(sf_info));
 
   if(write_to_stdout==true)
     return 1;
@@ -972,7 +972,7 @@ static int stdout_write(sample_t *buffer,size_t frames){
   }
 
   {
-    int i;
+    unsigned i;
     int writeplace=0;
     for(i=0;i<frames*num_channels;i++){
       int d = (int) rint(buffer[i]*32767.0);
@@ -1588,8 +1588,8 @@ static pthread_t keypress_thread={0};
 static void* keypress_func(void* arg){
   char gakk[64];
   turn_off_echo();
-  fgets(gakk,49,stdin);  
-  ungetc('\n',stdin);
+  if(fgets(gakk,49,stdin) != NULL)
+    ungetc('\n',stdin);
   sem_post(&stop_sem);
   return NULL;
 }
@@ -1702,7 +1702,7 @@ void init_arguments(int argc, char *argv[]){
                 "\n"
                 )
     {
-      OPTARG("--advanced-options","--help2") printf(advanced_help);exit(0);
+      OPTARG("--advanced-options","--help2") printf("%s",advanced_help);exit(0);
       OPTARG("--bitdepth","-b") bitdepth = OPTARG_GETINT();
       OPTARG("--bufsize","-B") min_buffer_time = OPTARG_GETFLOAT(); min_buffer_time=JC_MAX(0.01,min_buffer_time);
       OPTARG("--maxbufsize","-MB") max_buffer_time = OPTARG_GETFLOAT();
