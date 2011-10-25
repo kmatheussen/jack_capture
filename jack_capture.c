@@ -1634,7 +1634,7 @@ static const char *advanced_help =
   "[--disable-meter] or [-dm]       -> Disable console meter.\n"
   "[--hide-buffer-usage] or [-hbu]  -> Disable buffer usage updates in the console.\n"
   "[--disable-console] or [-dc]     -> Disable console updates. Same as \"-dm -hbu\".\n"
-  "[--daemon]                       -> Don't read the console (stdin)."
+  "[--daemon]                       -> Don't read the console (stdin).\n"
   "[--linear-meter] or [-lm]        -> Use linear scale for the console meter (default is dB scale)\n"
   "[--dB-meter-reference or [-dBr]  -> Specify reference level for dB meter. (default=0)\n"
   "[--meterbridge] or [-mb]         -> Start up meterbridge to monitor recorded sound.\n"

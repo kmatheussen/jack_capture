@@ -107,10 +107,11 @@ Additional arguments:
 [--mp3-quality n] or [-mp3q n]   -> Selects mp3 quality provided by liblame. n=0 is best, n=9 is worst.
                                     Default n is 2. (0 uses the most amount of CPU, 9 uses the least)
 [--mp3-bitrate n] or [-mp3b n]   -> Selects mp3 bitrate (in kbit/s).
-                                    Default is set by liblame. (currently 128)
+                                    Default is set by liblame. (currently 128).
 [--write-to-stdout] or [-ws]     -> Writes 16 bit little endian to stdout. (the --format option, the
-                                    --mp3 option, and some others have no effect using this option)
-[--disable-meter] or [-dm]       -> Disable console meter
+                                    --mp3 option, and some others have no effect using this option).
+[--disable-meter] or [-dm]       -> Disable console meter.
+[--daemon]                       -> Don't read the console (stdin).
 [--hide-buffer-usage] or [-hbu]  -> Disable buffer usage.
 [--disable-console] or [-dc]     -> Disable console updates. Same as "-dm -hbu".
 [--linear-meter] or [-lm]        -> Use linear scale for the console meter (default is dB scale)
@@ -199,6 +200,9 @@ CHANGES
  * Fix bug that caused durations lower than 2^31 seconds to fail.
    (Caused by a function returning int instead of int64_t).
    Thanks to Dan Muresan for pointing out the bug.
+ * Added the "-daemon" switch patch from Dan Muresan.
+   If the "-daemon" switch is enabled, jack_capture will not read
+   from stdin.
 
 
 0.9.56 -> 0.9.57
