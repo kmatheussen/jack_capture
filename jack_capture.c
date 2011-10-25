@@ -118,7 +118,7 @@ static bool write_to_mp3 = false;
 static int das_lame_quality = 2; // 0 best, 9 worst.
 static int das_lame_bitrate = -1;
 static bool use_jack_transport = false;
-
+static bool use_manual_connections = false;
 
 /* JACK data */
 static jack_port_t **ports;
@@ -1496,7 +1496,8 @@ static void* connection_thread(void *arg){
 }
 
 static void wake_up_connection_thread(void){
-  sem_post(&connection_semaphore);
+  if(use_manual_connections==false)
+    sem_post(&connection_semaphore);
 }
 
 static void start_connection_thread(void){
@@ -1645,6 +1646,7 @@ static const char *advanced_help =
   "[--jack-transport-multi]/[-jtm]  -> Similar to --jack-transport, but do not end program when jack transport stops.\n"
   "                                    Instead, record to a new file when jack_transport starts rolling again.\n"
   "                                    (not implemented yet)\n"
+  "[--manual-connections]/[-mc]     -> jack_capture will not connect any ports for you. \n"
   "[--bufsize s] or [-B s]          -> Initial/minimum buffer size in seconds. Default is 8 seconds\n"
   "                                    for mp3 files, and 4 seconds for all other formats.\n" 
   "[--maxbufsize] or [-MB]          -> Maximum buffer size in seconds jack_capture will allocate.\n"
@@ -1741,6 +1743,7 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--meterbridge-type","-mt") use_meterbridge=true;meterbridge_type=OPTARG_GETSTRING();
       OPTARG("--meterbridge-reference","-mr") use_meterbridge=true;meterbridge_reference=OPTARG_GETSTRING();
       OPTARG("--jack-transport","-jt") use_jack_transport=true;
+      OPTARG("--manual-connections","-mc") use_manual_connections=true;
       OPTARG("--filename","-fn") base_filename=OPTARG_GETSTRING();
       OPTARG_LAST() base_filename=OPTARG_GETSTRING();
     }OPTARGS_END;
@@ -1791,7 +1794,8 @@ void init_various(void){
   verbose_print("main() init jack 1\n");
   // Init jack 1
   {
-    start_connection_thread();
+    if(use_manual_connections==false)
+      start_connection_thread();
     start_jack();
     portnames_add_defaults();
   }
@@ -1830,7 +1834,8 @@ void init_various(void){
 
     jack_on_shutdown(client, jack_shutdown, NULL);
 
-    jack_set_graph_order_callback(client,graphordercallback,NULL);
+    if(use_manual_connections==false)
+      jack_set_graph_order_callback(client,graphordercallback,NULL);
 
     if (jack_activate(client)) {
       fprintf (stderr,"\nCan not activate client");
@@ -1838,7 +1843,8 @@ void init_various(void){
     }
 
     create_ports();
-    connect_ports(ports);
+    if(use_manual_connections==false)
+      connect_ports(ports);
   }
 
 
@@ -1909,7 +1915,8 @@ void stop_recording_and_cleanup(void){
 
   is_running=0;
   
-  stop_connection_thread();
+  if(use_manual_connections==false)
+    stop_connection_thread();
   
   if(jack_has_been_shut_down==false)
     jack_client_close(client);
