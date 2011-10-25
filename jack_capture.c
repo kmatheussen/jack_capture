@@ -101,6 +101,7 @@ static char *filename_prefix="jack_capture_";
 static int64_t num_frames_recorded=0;
 static int64_t num_frames_to_record=0;
 static bool wait_for_keyboard=true;
+static bool no_stdin=false;
 static double recording_time=0.0;
 static const int disk_error_stop=0;
 static int disk_errors=0;
@@ -1633,6 +1634,7 @@ static const char *advanced_help =
   "[--disable-meter] or [-dm]       -> Disable console meter.\n"
   "[--hide-buffer-usage] or [-hbu]  -> Disable buffer usage updates in the console.\n"
   "[--disable-console] or [-dc]     -> Disable console updates. Same as \"-dm -hbu\".\n"
+  "[--daemon]                       -> Don't read the console (stdin)."
   "[--linear-meter] or [-lm]        -> Use linear scale for the console meter (default is dB scale)\n"
   "[--dB-meter-reference or [-dBr]  -> Specify reference level for dB meter. (default=0)\n"
   "[--meterbridge] or [-mb]         -> Start up meterbridge to monitor recorded sound.\n"
@@ -1732,6 +1734,7 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--disable-meter","-dm") use_vu=false;
       OPTARG("--hide-buffer-usage","-hbu") show_bufferusage=false;
       OPTARG("--disable-console","-dc") use_vu=false;show_bufferusage=false;
+      OPTARG("--daemon","") no_stdin=true;
       OPTARG("--linear-meter","-lm") vu_dB=false;
       OPTARG("--dB-meter-reference","-dBr") vu_dB=true;vu_bias=powf(10.0f,OPTARG_GETFLOAT()*-0.05f);//from meterbridge
       OPTARG("--meterbridge","-mb") use_meterbridge=true;
@@ -1816,7 +1819,7 @@ void init_various(void){
     sem_init(&stop_sem,0,0);
     signal(SIGINT,finish);
     signal(SIGTERM,finish);
-    if(wait_for_keyboard==true)
+    if(wait_for_keyboard==true && no_stdin==false)
       start_keypress_thread();
   }
 
