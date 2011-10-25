@@ -83,7 +83,7 @@ static float min_buffer_time=-1.0f;
 static float max_buffer_time=40.0f;
 static jack_client_t *client=NULL;
 #define DEFAULT_NUM_CHANNELS 2
-static int channels=-1;
+static int num_channels=-1;
 static int bitdepth=0;
 static char *base_filename=NULL;
 static char *filename=NULL;
@@ -271,8 +271,8 @@ static int buffer_size_in_bytes;
 // buffer size in bytes = block size in bytes * num_channels
 
 
-static int seconds_to_frames(float seconds){
-  return (int)(seconds*jack_samplerate);
+static int64_t seconds_to_frames(float seconds){
+  return (int64_t) (((long double)seconds)*((long double)jack_samplerate));
 }
 
 /*
@@ -347,7 +347,7 @@ static void buffers_init(){
   vringbuffer_set_autoincrease_callback(vringbuffer,autoincrease_callback,0);
 
   current_buffer = vringbuffer_get_writing(vringbuffer);
-  empty_buffer   = my_calloc(sizeof(sample_t),block_size*channels);
+  empty_buffer   = my_calloc(sizeof(sample_t),block_size*num_channels);
 }
 
 
@@ -374,24 +374,24 @@ static void portnames_add_defaults(void){
       fprintf(stderr,"No physical output ports found in your jack setup. Exiting.\n");
       exit(0);
     }
-    if(channels==-1)
-      channels=DEFAULT_NUM_CHANNELS;
+    if(num_channels==-1)
+      num_channels=DEFAULT_NUM_CHANNELS;
   }else
-    if(channels==-1)
-      channels=num_cportnames;
+    if(num_channels==-1)
+      num_channels=num_cportnames;
 
-  if(channels<=0){
+  if(num_channels<=0){
     fprintf(stderr,"No point recording 0 channels. Exiting.\n");
     exit(0);
   }
 
-  // At this point, the variable "channels" has a known and valid value.
-  vu_vals=my_calloc(sizeof(float),channels);
-  vu_times=my_calloc(sizeof(int),channels);
-  vu_peaks=my_calloc(sizeof(int),channels);
-  vu_peakvals=my_calloc(sizeof(float),channels);
+  // At this point, the variable "num_channels" has a known and valid value.
+  vu_vals=my_calloc(sizeof(float),num_channels);
+  vu_times=my_calloc(sizeof(int),num_channels);
+  vu_peaks=my_calloc(sizeof(int),num_channels);
+  vu_peakvals=my_calloc(sizeof(float),num_channels);
 
-  buffer_size_in_bytes = ALIGN_UP_DOUBLE(sizeof(buffer_t) + block_size*channels*sizeof(sample_t));
+  buffer_size_in_bytes = ALIGN_UP_DOUBLE(sizeof(buffer_t) + block_size*num_channels*sizeof(sample_t));
   verbose_print("buf_size_in_bytes: %d\n",buffer_size_in_bytes);
 }
 
@@ -514,9 +514,9 @@ static void print_console_top(void){
 }
 
 static void init_vu(void){
-  //int channels=4;
+  //int num_channels=4;
   int ch;
-  for(ch=0;ch<channels;ch++)
+  for(ch=0;ch<num_channels;ch++)
     printf("\n");
 }
 
@@ -528,9 +528,9 @@ static void init_show_bufferusage(void){
 static void move_cursor_to_top(void){
   printf("%c[%dA",0x1b,
          use_vu&&show_bufferusage
-         ? channels+1
+         ? num_channels+1
          : use_vu
-           ? channels
+           ? num_channels
            : show_bufferusage
              ? 1
              : 0);
@@ -540,7 +540,7 @@ static void move_cursor_to_top(void){
 // http://www.linuxjournal.com/article/8603
 
 static void print_console(bool move_cursor_to_top_doit,bool force_update){
-  //int channels=4;
+  //int num_channels=4;
   int ch;
   char vol[vu_len+50];
   vol[2]=':';
@@ -559,7 +559,7 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
     // Set cyan color
     printf("%c[36m",0x1b);
 
-    for(ch=0;ch<channels;ch++){
+    for(ch=0;ch<num_channels;ch++){
       int i;
       float val=vu_vals[ch];
       int pos;
@@ -766,8 +766,8 @@ static int mp3bufsize;
 static int open_mp3file(void){
   buffer_interleaved = false;
 
-  if(channels!=2){
-    print_message("Error. 2 channels supported for mp3 files only. (%d)\n",channels);
+  if(num_channels!=2){
+    print_message("Error. 2 channels supported for mp3 files only. (%d)\n",num_channels);
     return 0;
   }
 
@@ -837,11 +837,11 @@ static int open_soundfile(void){
   /////////////////////////
 
   sf_info.samplerate = jack_get_sample_rate (client);
-  sf_info.channels = channels;
+  sf_info.channels = num_channels;
   
   {
     int format=getformat(soundfile_format);
-    if(format==-1 && channels>2){
+    if(format==-1 && num_channels>2){
       fprintf(stderr,"Warning, the format \"%s\" is not supported. Using %s instead.\n",soundfile_format_multi,soundfile_format);
       sf_info.format=MORE_THAN_TWO_CHANNELS_FORMAT;
     }else if(format==-1){
@@ -930,7 +930,7 @@ static void close_soundfile(void){
 //#define UINT32_MAX 100000+(1024*1024)
 
 static int handle_filelimit(size_t frames){
-  int new_bytes=frames*bytes_per_frame*channels;
+  int new_bytes=frames*bytes_per_frame*num_channels;
 
   if(is_using_wav && (disksize + ((int64_t)new_bytes) >= UINT32_MAX-(1024*1024))){ // (1024*1024) should be enough for the header.
 
@@ -956,12 +956,13 @@ static int handle_filelimit(size_t frames){
 }
 
 
+
 // stdout_write made by looking at http://mir.dnsalias.com/oss/jackstdout/start
 // made by Robin Gareus.
 static int stdout_write(sample_t *buffer,size_t frames){
   static char *tobuffer=NULL;
   static int bufferlen=0;
-  int bytes_to_write=frames*channels*2;
+  int bytes_to_write=frames*num_channels*2;
 
   if(bufferlen<bytes_to_write){
     free(tobuffer);
@@ -972,7 +973,7 @@ static int stdout_write(sample_t *buffer,size_t frames){
   {
     int i;
     int writeplace=0;
-    for(i=0;i<frames*channels;i++){
+    for(i=0;i<frames*num_channels;i++){
       int d = (int) rint(buffer[i]*32767.0);
       tobuffer[writeplace++] = (unsigned char) (d&0xff);
       tobuffer[writeplace++] = (unsigned char) (((d&0xff00)>>8)&0xff);
@@ -980,14 +981,17 @@ static int stdout_write(sample_t *buffer,size_t frames){
   }
 
   {
-    int fd=fileno(stdout);
+    int   fd           = fileno(stdout);
+    char *tobuffer_use = tobuffer;
+
     while(bytes_to_write > 0){
-      int written=write(fd,tobuffer,bytes_to_write);
+      int written=write(fd,tobuffer_use,bytes_to_write);
       if(written==-1){
 	fprintf(stderr,"Error writing to stdout.\n");
 	break;
       }
       bytes_to_write -= written;
+      tobuffer_use   += written;
     }
   }
 
@@ -1128,12 +1132,12 @@ static void send_buffer_to_disk_thread(buffer_t *buffer){
 
 static void process_fill_buffer(sample_t *in[],buffer_t *buffer,int i,int end){
   sample_t *data=buffer->data;
-  int pos=buffer->pos*channels;
+  int pos=buffer->pos*num_channels;
   int ch;
 
   if(buffer_interleaved == true){
     for(;i<end;i++){
-      for(ch=0;ch<channels;ch++){
+      for(ch=0;ch<num_channels;ch++){
         sample_t val=in[ch][i];
         data[pos++]=val;
         val=fabsf(val);
@@ -1143,7 +1147,7 @@ static void process_fill_buffer(sample_t *in[],buffer_t *buffer,int i,int end){
     }
   }else{
     int start_i = i;
-    for(ch=0;ch<channels;ch++){
+    for(ch=0;ch<num_channels;ch++){
       sample_t *curr_in=in[ch];
       float max_vu=vu_vals[ch];
       for(i = start_i; i<end ; i++){
@@ -1156,8 +1160,8 @@ static void process_fill_buffer(sample_t *in[],buffer_t *buffer,int i,int end){
       vu_vals[ch] = max_vu;
     }
   }
-  //fprintf(stderr,"pos: %d %d\n",pos,channels);
-  buffer->pos=pos/channels;
+  //fprintf(stderr,"pos: %d %d\n",pos,num_channels);
+  buffer->pos=pos/num_channels;
 }
 
 static bool process_new_current_buffer(int frames_left){
@@ -1172,10 +1176,10 @@ static bool process_new_current_buffer(int frames_left){
 }
 
 static void process_fill_buffers(int jack_block_size){
-  sample_t *in[channels];
+  sample_t *in[num_channels];
   int i=0,ch;
 
-  for(ch=0;ch<channels;ch++)
+  for(ch=0;ch<num_channels;ch++)
     in[ch]=jack_port_get_buffer(ports[ch],jack_block_size);
       
   if(current_buffer==NULL && process_new_current_buffer(jack_block_size)==false)
@@ -1340,12 +1344,12 @@ static int init_meterbridge_ports(){
     }
 
     {
-      jack_port_t **ports_meterbridge2 = (jack_port_t **) my_calloc (sizeof (jack_port_t *),channels);  
+      jack_port_t **ports_meterbridge2 = (jack_port_t **) my_calloc (sizeof (jack_port_t *),num_channels);  
 
       ports_meterbridge2[0]=port1;
       {
 	int ch;
-	for(ch=1;ch<channels;ch++){
+	for(ch=1;ch<num_channels;ch++){
 	  sprintf(portname,"%s:meter_%d",meterbridge_jackname,ch+1);
 	  ports_meterbridge2[ch]=jack_port_by_name(client,portname);
 	  if(ports_meterbridge2[ch]==NULL){
@@ -1380,7 +1384,7 @@ static int compare(const void *a, const void *b){
 static int reconnect_ports_questionmark(void){
   int ch;
   int ret=0;
-  for(ch=0;ch<channels;ch++){
+  for(ch=0;ch<num_channels;ch++){
     char **connections1 = portnames_get_connections(ch);
     const char **connections2 = jack_port_get_all_connections(client,ports[ch]);
 
@@ -1426,7 +1430,7 @@ static void disconnect_ports(jack_port_t** ports){
   if(ports==NULL)
     return;
 
-  for(ch=0;ch<channels;ch++){
+  for(ch=0;ch<num_channels;ch++){
     int lokke = 0;
     const char **connections = jack_port_get_all_connections(client,ports[ch]);
 
@@ -1445,7 +1449,7 @@ static void connect_ports(jack_port_t** ports){
   if(ports==NULL)
     return;
 
-  for(ch=0;ch<channels;ch++){
+  for(ch=0;ch<num_channels;ch++){
     int lokke = 0;
 
     char **connections = portnames_get_connections(ch);
@@ -1512,10 +1516,10 @@ static int graphordercallback(void *arg){
 
 
 static void create_ports(void){
-  ports = (jack_port_t **) my_calloc (sizeof (jack_port_t *),channels);  
+  ports = (jack_port_t **) my_calloc (sizeof (jack_port_t *),num_channels);  
   {
     int ch;
-    for(ch=0;ch<channels;ch++) {
+    for(ch=0;ch<num_channels;ch++) {
       char name[500];
       sprintf(name,"input%d",ch+1);
       ports[ch]=jack_port_register(client,name,JACK_DEFAULT_AUDIO_TYPE,JackPortIsInput|JackPortIsTerminal,0);
@@ -1700,7 +1704,7 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--bitdepth","-b") bitdepth = OPTARG_GETINT();
       OPTARG("--bufsize","-B") min_buffer_time = OPTARG_GETFLOAT(); min_buffer_time=JC_MAX(0.01,min_buffer_time);
       OPTARG("--maxbufsize","-MB") max_buffer_time = OPTARG_GETFLOAT();
-      OPTARG("--channels","-c") channels = OPTARG_GETINT();
+      OPTARG("--channels","-c") num_channels = OPTARG_GETINT();
       OPTARG("--filename-prefix","-fp") filename_prefix = OPTARG_GETSTRING();
       OPTARG("--leading-zeros","-z") leading_zeros = OPTARG_GETINT();
       OPTARG("--recording-time","-d"){
@@ -1756,7 +1760,7 @@ void init_arguments(int argc, char *argv[]){
 
   verbose_print("main() find default file format\n");
   if(soundfile_format_is_set==false){
-    if(channels>2)
+    if(num_channels>2)
       soundfile_format=soundfile_format_multi;
     else
       soundfile_format=soundfile_format_one_or_two;
@@ -1847,7 +1851,7 @@ void init_various(void){
   // Start meterbridge
   {
     if(use_meterbridge)
-      start_meterbridge(channels);
+      start_meterbridge(num_channels);
   }
 
   verbose_print("main() Print some info.\n");

@@ -14,10 +14,10 @@ OPTIMIZE=-O3 -mtune=native
 COMPILEFLAGS=$(OPTIMIZE) -DVERSION=\"$(VERSION)\" -Wall
 LINKFLAGS=-ljack -lsndfile -lm -lpthread
 
-targets = jack_capture jack_capture_gui2
+targets = jack_capture
 
 
-all: check_dependencies jack_capture jack_capture_gui2
+all: check_dependencies jack_capture
 
 install: $(targets)
 	mkdir -p $(DESTDIR)$(bindir)
@@ -25,7 +25,6 @@ install: $(targets)
 
 uninstall:
 	rm $(DESTDIR)$(bindir)/jack_capture
-	rm $(DESTDIR)$(bindir)/jack_capture_gui2
 
 check_dependencies:
 	@echo
