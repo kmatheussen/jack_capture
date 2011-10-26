@@ -544,7 +544,7 @@ static void move_cursor_to_top(void){
            : show_bufferusage
              ? 1
              : 0);
-  msleep(10);
+  msleep(3);
 }
 
 // Console colors:
@@ -714,7 +714,7 @@ static void *helper_thread_func(void *arg){
   message_string[0]     = 0;
   helper_thread_running = 0;
 
-  msleep(50);
+  msleep(4);
 
   printf("%c[31m",0x1b); //red color
   printf("Finished.");
@@ -742,7 +742,7 @@ static void print_message(const char *fmt, ...){
     pthread_mutex_lock(&print_message_mutex);{
 
       while(message_string[0]!=0)
-        msleep(1);
+        msleep(2);
     
       va_list argp;
       va_start(argp,fmt);
@@ -750,7 +750,7 @@ static void print_message(const char *fmt, ...){
       va_end(argp);
 
       while(message_string[0]!=0)
-        msleep(10);
+        msleep(2);
 
     }pthread_mutex_unlock(&print_message_mutex);
   }
@@ -1935,7 +1935,7 @@ void wait_until_recording_finished(void){
     //	printf("%c[%dA",0x1b,1); // Pressing return moves the cursor.
     if(silent==false){  // messy...
       print_message("Please wait while writing all data to disk. (shouldn't take long)\n");
-      msleep(20);
+      msleep(2);
     }
     //print_message("%c[%dAPlease wait while writing all data to disk. (shouldn't take long)\n",0x1b,1); // necessary.
   }
