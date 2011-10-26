@@ -1,6 +1,6 @@
 
-jack_capture V0.9.58
-Released 2011-10-25
+jack_capture V0.9.59
+Released 2011-10-26
 Kjetil S. Matheussen
 
 
@@ -187,6 +187,10 @@ made by Robin Gareus.
 
 CHANGES
 *******
+0.9.58 -> 0.9.59
+ * Terminal printing looks okay now. (Don't look at the code!)
+
+
 0.9.57 -> 0.9.58
  * Created git repository for jack_capture at github:
    https://github.com/kmatheussen/jack_capture
