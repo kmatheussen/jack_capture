@@ -206,8 +206,8 @@ static void verbose_print(const char *fmt, ...){
 }
 
 static void* my_calloc(size_t size1,size_t size2){
-  size_t size=size1*size2;
-  void* ret=malloc(size);
+  size_t size = size1*size2;
+  void*  ret  = malloc(size);
   if(ret==NULL){
     fprintf(stderr,"\nOut of memory. Try a smaller buffer.\n");
     return NULL;
@@ -218,7 +218,7 @@ static void* my_calloc(size_t size1,size_t size2){
 
 static bool set_high_priority(void){
   static bool shown_warning = false;
-  static int prio=-20;
+  static int  prio          = -20;
 
   while(prio<0 && setpriority(PRIO_PROCESS,0,prio)==-1)
     prio++;
@@ -356,10 +356,10 @@ static void buffers_init(){
 /////////////////////////////////////////////////////////////////////
 //////////////////////// PORTNAMES //////////////////////////////////
 /////////////////////////////////////////////////////////////////////
-static char **cportnames=NULL;
+static const char **cportnames=NULL;
 static int num_cportnames=0;
 
-static int findnumports(char **ports){
+static int findnumports(const char **ports){
   int ret=0;
   while(ports && ports[ret]!=NULL)
     ret++;
@@ -369,7 +369,7 @@ static int findnumports(char **ports){
 
 static void portnames_add_defaults(void){
   if(cportnames==NULL){
-    cportnames=(char **)jack_get_ports(client,NULL,NULL,JackPortIsPhysical|JackPortIsInput);
+    cportnames=jack_get_ports(client,NULL,NULL,JackPortIsPhysical|JackPortIsInput);
     num_cportnames=JC_MAX(DEFAULT_NUM_CHANNELS,findnumports(cportnames));
     if(num_cportnames==0){
       fprintf(stderr,"No physical output ports found in your jack setup. Exiting.\n");
@@ -387,10 +387,10 @@ static void portnames_add_defaults(void){
   }
 
   // At this point, the variable "num_channels" has a known and valid value.
-  vu_vals=my_calloc(sizeof(float),num_channels);
-  vu_times=my_calloc(sizeof(int),num_channels);
-  vu_peaks=my_calloc(sizeof(int),num_channels);
-  vu_peakvals=my_calloc(sizeof(float),num_channels);
+  vu_vals     = my_calloc(sizeof(float),num_channels);
+  vu_times    = my_calloc(sizeof(int),num_channels);
+  vu_peaks    = my_calloc(sizeof(int),num_channels);
+  vu_peakvals = my_calloc(sizeof(float),num_channels);
 
   buffer_size_in_bytes = ALIGN_UP_DOUBLE(sizeof(buffer_t) + block_size*num_channels*sizeof(sample_t));
   verbose_print("buf_size_in_bytes: %d\n",buffer_size_in_bytes);
@@ -398,7 +398,7 @@ static void portnames_add_defaults(void){
 
 
 static void portnames_add(char *name){
-  char **new_outportnames;
+  const char **new_outportnames;
   int add_ch;
 
   if(name[strlen(name)-1]=='*'){
@@ -408,13 +408,13 @@ static void portnames_add(char *name){
 
     pattern[strlen(name)-1]=0;
 
-    new_outportnames=(char**)jack_get_ports(client,pattern,"",0);
-    //char **new_outportnames=(char**)jack_get_ports(client,"system:capture_1$","",0);
-    add_ch=findnumports(new_outportnames);
+    new_outportnames          = jack_get_ports(client,pattern,"",0);
+    //char **new_outportnames = (char**)jack_get_ports(client,"system:capture_1$","",0);
+    add_ch                    = findnumports(new_outportnames);
   }else{
-    new_outportnames=my_calloc(1,sizeof(char*));
-    new_outportnames[0]=name;
-    add_ch=1;
+    new_outportnames          = my_calloc(1,sizeof(char*));
+    new_outportnames[0]       = name;
+    add_ch                    = 1;
   }
 
   if(add_ch>0){
@@ -429,7 +429,7 @@ static void portnames_add(char *name){
     }
     
   }else{
-    fprintf(stderr,"\nWarning, No port(s) with name \"%s\".\n",name);
+    fprintf(stderr,"\nWarning, no port(s) with name \"%s\".\n",name);
     if(cportnames==NULL)
       if(silent==false)
 	fprintf(stderr,"This could lead to using default ports instead.\n");
@@ -437,12 +437,12 @@ static void portnames_add(char *name){
 }
 
 
-static char **portnames_get_connections(int ch){
+static const char **portnames_get_connections(int ch){
   if(ch>=num_cportnames)
     return NULL;
   else{      
-    jack_port_t* port=jack_port_by_name(client,cportnames[ch]);
-    char **ret;
+    jack_port_t  *port = jack_port_by_name(client,cportnames[ch]);
+    const char  **ret;
 
     if(port==NULL){
       print_message("Error, port with name \"%s\" not found.\n",cportnames[ch]);
@@ -450,10 +450,10 @@ static char **portnames_get_connections(int ch){
     }
 
     if(jack_port_flags(port) & JackPortIsInput){
-      ret=(char**)jack_port_get_all_connections(client,port);
+      ret    = jack_port_get_all_connections(client,port);
     }else{
-      ret=my_calloc(2,sizeof(char*));
-      ret[0]=cportnames[ch];
+      ret    = my_calloc(2,sizeof(char*));
+      ret[0] = cportnames[ch];
     }
     
     return ret;
@@ -544,9 +544,9 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
   //int num_channels=4;
   int ch;
   char vol[vu_len+50];
-  vol[2]=':';
-  vol[3]='|';
-  vol[4+vu_len+1]=0;
+  vol[2]          = ':';
+  vol[3]          = '|';
+  vol[4+vu_len+1] = 0;
 
   // Values have not been updated since last time. Return.
   if(force_update==false && vu_vals[0]==-1.0f)
@@ -561,40 +561,40 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
     printf("%c[36m",0x1b);
 
     for(ch=0;ch<num_channels;ch++){
-      int i;
-      float val=vu_vals[ch];
-      int pos;
-      vu_vals[ch]=-1.0f;
+      int   i;
+      float val   = vu_vals[ch];
+      int   pos;
+      vu_vals[ch] = -1.0f;
       
       if(vu_dB)
-        pos=iec_scale(20.0f * log10f(val * vu_bias)) * (vu_len) / 200;
+        pos = iec_scale(20.0f * log10f(val * vu_bias)) * (vu_len) / 200;
       else
-        pos=val*(vu_len);
+        pos = val*(vu_len);
       
       if (pos > vu_peaks[ch]) {
-        vu_peaks[ch] = pos;
+        vu_peaks[ch]    = pos;
         vu_peakvals[ch] = val;
-        vu_times[ch] = 0;
+        vu_times[ch]    = 0;
       } else if (vu_times[ch]++ > 40) {
-        vu_peaks[ch] = pos;
+        vu_peaks[ch]    = pos;
         vu_peakvals[ch] = val;
       }
       
       if(ch>9){
-        vol[0]='0'+ch/10;
-        vol[1]='0'+ch-(10*(ch/10));
+        vol[0] = '0'+ch/10;
+        vol[1] = '0'+ch-(10*(ch/10));
       }else{
-        vol[0]='0';
-        vol[1]='0'+ch;
+        vol[0] = '0';
+        vol[1] = '0'+ch;
       }
       
       for(i=0;i<vu_len;i++)
         if(vu_peaks[ch]==i && vu_peakvals[ch]>0.0f)
-          vol[4+i]='*';
+          vol[4+i] = '*';
         else if(i<=pos && val>0.0f)
-          vol[4+i]='-';
+          vol[4+i] = '-';
         else
-          vol[4+i]=' ';
+          vol[4+i] = ' ';
       
       if(vu_peakvals[ch]>=1.0f){
         vol[4+vu_len]='!';
@@ -695,8 +695,8 @@ static void *helper_thread_func(void *arg){
     print_console(true,true);
 
 
-  message_string[0]=0;
-  helper_thread_running=0;
+  message_string[0]     = 0;
+  helper_thread_running = 0;
   return NULL;
 }
 
@@ -838,7 +838,7 @@ static int open_soundfile(void){
   /////////////////////////
 
   sf_info.samplerate = jack_get_sample_rate (client);
-  sf_info.channels = num_channels;
+  sf_info.channels   = num_channels;
   
   {
     int format=getformat(soundfile_format);
@@ -1292,13 +1292,13 @@ static void start_meterbridge(int num_channels){
   meterbridge_pid=fork();
   if(meterbridge_pid==0){
     char *argv[100+num_channels];
-    argv[0]="meterbridge";
-    argv[1]="-t";
-    argv[2]=meterbridge_type;
-    argv[3]="-n";
-    argv[4]=meterbridge_jackname;
-    argv[5]="-r";
-    argv[6]=meterbridge_reference;
+    argv[0] = "meterbridge";
+    argv[1] = "-t";
+    argv[2] = meterbridge_type;
+    argv[3] = "-n";
+    argv[4] = meterbridge_jackname;
+    argv[5] = "-r";
+    argv[6] = meterbridge_reference;
     {
       int ch;
       for(ch=0;ch<num_channels;ch++){
@@ -1386,11 +1386,11 @@ static int reconnect_ports_questionmark(void){
   int ch;
 
   for(ch=0;ch<num_channels;ch++){
-    char       **connections1 = portnames_get_connections(ch);
+    const char **connections1 = portnames_get_connections(ch);
     const char **connections2 = jack_port_get_all_connections(client,ports[ch]);
 
     int memb1 = findnumports(connections1);
-    int memb2 = findnumports((char**)connections2);
+    int memb2 = findnumports(connections2);
 
     if(memb1==0 && memb2==0)
       continue;
@@ -1402,7 +1402,7 @@ static int reconnect_ports_questionmark(void){
     }
 
     qsort(connections1,memb1,sizeof(char*),compare);
-    qsort(connections2,memb1,sizeof(char*),compare);
+    qsort(connections2,memb2,sizeof(char*),compare);
     
     {
       int lokke = 0;
@@ -1452,7 +1452,7 @@ static void connect_ports(jack_port_t** ports){
   for(ch=0;ch<num_channels;ch++){
     int lokke = 0;
 
-    char **connections = portnames_get_connections(ch);
+    const char **connections = portnames_get_connections(ch);
 
     while(connections && connections[lokke] != NULL){
       int err=jack_connect(client,connections[lokke],jack_port_name(ports[ch]));
