@@ -497,6 +497,15 @@ static int iec_scale(float db) {
          return (int)(def * 2.0f);
 }
 
+static void msleep(int n){
+  usleep(n*1000);
+}
+
+static void print_ln(void){
+  putchar('\n');
+  //msleep(3);
+}
+
 static void print_console_top(void){
   if(use_vu){
     int lokke=0;
@@ -508,9 +517,9 @@ static void print_console_top(void){
     printf("   |");
     for(lokke=0;lokke<vu_len;lokke++)
       putchar(c);
-    printf("|\n");
+    printf("|");print_ln();
   }else{
-    printf("\n");
+    //print_ln();
   }
 }
 
@@ -518,11 +527,11 @@ static void init_vu(void){
   //int num_channels=4;
   int ch;
   for(ch=0;ch<num_channels;ch++)
-    printf("\n");
+    print_ln();
 }
 
 static void init_show_bufferusage(void){
-  printf("\n");
+  print_ln();
 }
 
 
@@ -535,6 +544,7 @@ static void move_cursor_to_top(void){
            : show_bufferusage
              ? 1
              : 0);
+  msleep(10);
 }
 
 // Console colors:
@@ -616,13 +626,14 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
     printf("%c[32m",0x1b); // green color
     printf("Buffer: %.2fs. / %.2fs. "
            "Disk high priority: [%c]. "
-           "Overruns: %d%c[0m\n",
+           "Overruns: %d%c[0m",
            //fmaxf(0.0f,buflen-bufleft),buflen,
            bufleft,buflen,
            disk_thread_has_high_priority?'x':' ',
            total_overruns,
            0x1b // reset color
            );
+    print_ln();
   }else{
     printf("%c[0m",0x1b); // reset colors
     fprintf(stderr,"%c[0m",0x1b); // reset colors
@@ -662,14 +673,19 @@ static void *helper_thread_func(void *arg){
     if(message_string[0]!=0){
       if(use_vu || show_bufferusage){
 	move_cursor_to_top();
+        if(!use_vu){
+          print_ln();
+        }
 	printf("%c[%dA",0x1b,1); // move up yet another line.
+        msleep(5);
 	printf("%c[31m",0x1b);   // set red color
 	{ // clear line
 	  int lokke;
 	  for(lokke=0;lokke<vu_len+5;lokke++)
 	    putchar(' ');
-	  putchar('\n');
+          print_ln();
 	  printf("%c[%dA",0x1b,1); // move up again
+          msleep(5);
 	}
       }
       printf(MESSAGE_PREFIX); 
@@ -686,17 +702,25 @@ static void *helper_thread_func(void *arg){
     if(init_meterbridge_ports()==1 && use_vu==false && show_bufferusage==false) // Note, init_meterbridge_ports will usually exit at the top of the function, where it tests for ports_meterbridge!=NULL (this stuff needs to be handled better)
       break;
 
-    usleep(1000000/20);
+    msleep(1000/20);
 
   }while(is_helper_running);
 
 
-  if(use_vu || show_bufferusage)
+  if(use_vu || show_bufferusage){
     print_console(true,true);
-
+  }
 
   message_string[0]     = 0;
   helper_thread_running = 0;
+
+  msleep(50);
+
+  printf("%c[31m",0x1b); //red color
+  printf("Finished.");
+  printf("%c[0m",0x1b); // reset colors
+  printf("\n");
+
   return NULL;
 }
 
@@ -710,19 +734,23 @@ static void print_message(const char *fmt, ...){
     va_start(argp,fmt);
     fprintf(stderr,"%c[31m" MESSAGE_PREFIX,0x1b);   // set red color
     vfprintf(stderr,fmt,argp);
-    fprintf(stderr,"%c[0m",0x1b); // reset colors
+    //fprintf(stderr,"%c[0m",0x1b); // reset colors
+    //msleep(1);
     va_end(argp);
   }else{
 
     pthread_mutex_lock(&print_message_mutex);{
 
       while(message_string[0]!=0)
-        usleep(20);
+        msleep(1);
     
       va_list argp;
       va_start(argp,fmt);
       vsprintf(message_string,fmt,argp);
       va_end(argp);
+
+      while(message_string[0]!=0)
+        msleep(10);
 
     }pthread_mutex_unlock(&print_message_mutex);
   }
@@ -738,9 +766,13 @@ static void stop_helper_thread(void){
   //helper_thread_running=0;
   is_helper_running=false;
   pthread_join(helper_thread, NULL);
-      
-  if(use_vu||show_bufferusage)
+
+  /*
+  if(use_vu||show_bufferusage){
     printf("%c[0m",0x1b); // reset colors
+    usleep(1000000/2); // wait for terminal    
+  }
+  */
 }
 
 
@@ -1901,8 +1933,10 @@ void wait_until_recording_finished(void){
   if(helper_thread_running==1){
     //      if(use_vu || show_bufferusage)
     //	printf("%c[%dA",0x1b,1); // Pressing return moves the cursor.
-    if(silent==false)  // messy...
+    if(silent==false){  // messy...
       print_message("Please wait while writing all data to disk. (shouldn't take long)\n");
+      msleep(20);
+    }
     //print_message("%c[%dAPlease wait while writing all data to disk. (shouldn't take long)\n",0x1b,1); // necessary.
   }
 }
@@ -1928,13 +1962,16 @@ void stop_recording_and_cleanup(void){
     kill(meterbridge_pid,SIGINT);
   
   stop_helper_thread();
-  
+
+  /*
   if(silent==false){
+    usleep(50); // wait for terminal
     fprintf(stderr,"%c[31m",0x1b); //red color
     fprintf(stderr,"Finished.");
     fprintf(stderr,"%c[0m",0x1b); // reset colors
     fprintf(stderr,"\n");
   }
+  */
 }
 
 
