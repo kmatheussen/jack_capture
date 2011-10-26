@@ -1384,13 +1384,13 @@ static int compare(const void *a, const void *b){
 
 static int reconnect_ports_questionmark(void){
   int ch;
-  int ret=0;
+
   for(ch=0;ch<num_channels;ch++){
-    char **connections1 = portnames_get_connections(ch);
+    char       **connections1 = portnames_get_connections(ch);
     const char **connections2 = jack_port_get_all_connections(client,ports[ch]);
 
-    int memb1=findnumports(connections1);
-    int memb2=findnumports((char**)connections2);
+    int memb1 = findnumports(connections1);
+    int memb2 = findnumports((char**)connections2);
 
     if(memb1==0 && memb2==0)
       continue;
@@ -1398,8 +1398,7 @@ static int reconnect_ports_questionmark(void){
     if(memb1!=memb2){
       free(connections1);
       free(connections2);
-      ret=1;
-      goto exit;
+      return 1;
     }
 
     qsort(connections1,memb1,sizeof(char*),compare);
@@ -1410,8 +1409,9 @@ static int reconnect_ports_questionmark(void){
       for(lokke=0;lokke<memb1;lokke++){
         //printf("connect_ports \"%s\" \"%s\" \n",connections1[lokke],connections2[lokke]);
         if(strcmp(connections1[lokke],connections2[lokke])){
-          ret=1;
-          goto exit;
+          free(connections1);
+          free(connections2);
+          return 1;
         }
       }
     }
@@ -1420,8 +1420,7 @@ static int reconnect_ports_questionmark(void){
     free(connections2);
   }
 
- exit:
-  return ret;
+  return 0;
 }
 
 
