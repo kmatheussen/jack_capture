@@ -76,6 +76,4 @@ setformat.c: gen_setformat_c.sh
 
 
 clean:
-	rm -f *~ jack_capture jack_capture_gui2 config_flags *.wav *.flac *.ogg *.mp3 *.au *.aiff *.wavex temp.c* setformat.c* das_config.h* a.out *.gz #*
-
-
+	rm -f *~ jack_capture jack_capture_gui2 config_flags *.wav *.flac *.ogg *.mp3 *.au *.aiff *.wavex temp.c* setformat.c* das_config.h* a.out *.gz  *.orig "#*"
