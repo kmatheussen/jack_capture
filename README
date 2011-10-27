@@ -1,6 +1,6 @@
 
-jack_capture V0.9.59
-Released 2011-10-26
+jack_capture V0.9.60
+Released 2011-10-27
 Kjetil S. Matheussen
 
 
@@ -187,6 +187,11 @@ made by Robin Gareus.
 
 CHANGES
 *******
+0.9.59 -> 0.9.60
+ * Applied Filipe Lopes' freewheel patch. Do not reconnect ports when
+   freewheeling.
+
+
 0.9.58 -> 0.9.59
  * Terminal printing looks okay now. (Don't look at the code!)
 
