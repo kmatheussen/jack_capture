@@ -130,6 +130,8 @@ static bool jack_has_been_shut_down=false;
 static int64_t unreported_overruns=0;
 static int total_overruns=0;
 
+static volatile int freewheel_mode=0;
+
 
 /* Disk thread */
 #if HAVE_LAME
@@ -1542,8 +1544,13 @@ static void stop_connection_thread(void){
 }
 
 static int graphordercallback(void *arg){
-  wake_up_connection_thread();
+  if (!freewheel_mode)
+    wake_up_connection_thread();
   return 0;
+}
+
+static void freewheelcallback(int starting, void *arg){
+  freewheel_mode = starting;
 }
 
 
@@ -1867,6 +1874,8 @@ void init_various(void){
 
     if(use_manual_connections==false)
       jack_set_graph_order_callback(client,graphordercallback,NULL);
+
+    jack_set_freewheel_callback(client,freewheelcallback,NULL);
 
     if (jack_activate(client)) {
       fprintf (stderr,"\nCan not activate client");
