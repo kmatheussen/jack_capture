@@ -718,11 +718,6 @@ static void *helper_thread_func(void *arg){
 
   msleep(4);
 
-  printf("%c[31m",0x1b); //red color
-  printf("Finished.");
-  printf("%c[0m",0x1b); // reset colors
-  printf("\n");
-
   return NULL;
 }
 
@@ -731,7 +726,7 @@ static void *helper_thread_func(void *arg){
 static pthread_mutex_t print_message_mutex = PTHREAD_MUTEX_INITIALIZER;  
 static void print_message(const char *fmt, ...){
   
-  if(helper_thread_running==0){
+  if(helper_thread_running==0 || write_to_stdout==true){
     va_list argp;
     va_start(argp,fmt);
     fprintf(stderr,"%c[31m" MESSAGE_PREFIX,0x1b);   // set red color
@@ -761,13 +756,17 @@ static void print_message(const char *fmt, ...){
 
 
 void setup_helper_thread (void){
-  pthread_create(&helper_thread, NULL, helper_thread_func, NULL);
+  if(write_to_stdout==false){
+    pthread_create(&helper_thread, NULL, helper_thread_func, NULL);
+  }
 }
 
 static void stop_helper_thread(void){
   //helper_thread_running=0;
   is_helper_running=false;
-  pthread_join(helper_thread, NULL);
+  if(write_to_stdout==false){
+    pthread_join(helper_thread, NULL);
+  }
 
   /*
   if(use_vu||show_bufferusage){
@@ -1972,7 +1971,7 @@ void stop_recording_and_cleanup(void){
   
   stop_helper_thread();
 
-  /*
+
   if(silent==false){
     usleep(50); // wait for terminal
     fprintf(stderr,"%c[31m",0x1b); //red color
@@ -1980,7 +1979,6 @@ void stop_recording_and_cleanup(void){
     fprintf(stderr,"%c[0m",0x1b); // reset colors
     fprintf(stderr,"\n");
   }
-  */
 }
 
 
