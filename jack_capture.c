@@ -26,6 +26,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <ctype.h>
 #include <errno.h>
 #include <unistd.h>
 #include <sndfile.h>
@@ -63,7 +64,7 @@
 
 #define OPTARGS_CHECK_GET(wrong,right) lokke==argc-1?(fprintf(stderr,"Must supply argument for '%s'\n",argv[lokke]),exit(-4),wrong):right
 
-#define OPTARGS_BEGIN(das_usage) {int lokke;const char *usage=das_usage;for(lokke=1;lokke<argc;lokke++){char *a=argv[lokke];if(!strcmp("--help",a)||!strcmp("-h",a)){fprintf(stderr,"%s",usage);exit(0);
+#define OPTARGS_BEGIN(das_usage) {int lokke;const char *usage=das_usage;for(lokke=0;lokke<argc;lokke++){char *a=argv[lokke];if(!strcmp("--help",a)||!strcmp("-h",a)){fprintf(stderr,"%s",usage);exit(0);
 #define OPTARG(name,name2) }}else if(!strcmp(name,a)||!strcmp(name2,a)){{
 #define OPTARG_GETINT() OPTARGS_CHECK_GET(0,atoi(argv[++lokke]))
 //int optargs_inttemp;
@@ -1826,6 +1827,91 @@ void init_arguments(int argc, char *argv[]){
 }
 
 
+char *string_concat(char *s1,char *s2){
+  char *ret=malloc(strlen(s1)+strlen(s2)+4);
+  sprintf(ret,"%s%s",s1,s2);
+  return ret;
+}
+
+int string_charpos(char *s, char c){
+  int pos;
+  for(pos=0;;pos++){
+    if(s[pos]==c)
+      return pos;
+    if(s[pos]==0)
+      return -1;
+  }
+}
+
+char *substring(char *s,int start,int end){
+  char *ret=calloc(1,end-start+1);
+  int read_pos;
+  int write_pos = 0;
+  for(read_pos=start;read_pos<end;read_pos++){
+    ret[write_pos++] = s[read_pos];
+  }
+  return ret;
+}
+
+// modifies input.
+char *strip_whitespace(char *s){
+  char *ret=s;
+
+  // strip before
+  while(isspace(ret[0]))
+    ret++;
+
+
+  // strip after
+  int pos=strlen(ret)-1;
+  while(isspace(ret[pos])){
+    ret[pos]=0;
+    pos--;
+  }
+
+
+  return ret;
+}
+
+
+char **read_config(int *argc,int max_size){
+  char **argv=calloc(max_size,sizeof(char*));
+  *argc = 0;
+
+  FILE *file = fopen(string_concat(getenv("HOME"), "/.jack_capture/config"),"r");
+  if(file==NULL)
+    return argv;
+
+  char *line = malloc(512);
+  while(fgets(line,510,file)!=NULL){
+    if(*argc>=max_size-3){
+      fprintf(stderr,"Too many arguments in config file.\n");
+      exit(-2);
+    }
+
+    line = strip_whitespace(line);
+    if(line[0]==0 || line[0]=='#')
+      continue;
+
+    int split_pos = string_charpos(line,'=');
+    if(split_pos!=-1){
+      char *name = strip_whitespace(substring(line,0,split_pos));
+      char *value = strip_whitespace(substring(line,split_pos+1,strlen(line)));
+      if(strlen(name)>0 && strlen(value)>0){
+        argv[*argc]   = string_concat("--",name);
+        *argc = *argc + 1;
+        argv[*argc] = value;
+        *argc = *argc + 1;    
+        //printf("pos: %d -%s- -%s-\n",split_pos,name,value);
+      }
+    }else{
+      argv[*argc] = string_concat("--",line);
+      *argc = *argc + 1;   
+    }
+  }
+
+  return argv;
+}
 
 void init_various(void){
   verbose_print("main() init jack 1\n");
@@ -1982,11 +2068,43 @@ void stop_recording_and_cleanup(void){
 }
 
 
+void append_argv(char **v1,char **v2,int len1,int len2,int max_size){
+  int write_pos;
+  int read_pos = 0;
+  for(write_pos = len1; write_pos<len1+len2; write_pos++){
+    if(write_pos==max_size){
+      fprintf(stderr,"Too many arguments.\n");
+      exit(-3);
+    }
+    //printf("v1[%d] = %s\n",write_pos,v2[read_pos]);
+    v1[write_pos] = v2[read_pos++];    
+  }
+}
+
+void print_argv(char **argv,int argc){
+  int i=0;
+  printf("print arguments. argc: %d. ",argc);
+  for(i=0;i<argc;i++){
+    printf("<%s>, ",argv[i]);
+  }
+  printf("-- finished. \n");
+}
+
 int main (int argc, char *argv[]){
   //get_free_mem();
   //mainpid=getpid();
 
-  init_arguments(argc,argv);
+  // remove exe name from argument list.
+  argv = &argv[1];
+  argc = argc-1;
+
+  // get arguments both from command line and config file (config file is read first, so that command line can override)
+  int c_argc;
+  char **c_argv = read_config(&c_argc,500);
+  append_argv(c_argv,argv,c_argc,argc,500);
+  //print_argv(c_argv,c_argc+argc);
+
+  init_arguments(c_argc+argc,c_argv);
 
   init_various();
 

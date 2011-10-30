@@ -46,6 +46,8 @@ WMA
 AAC
 VQF
 RA
+ALAC
+AIFC
 "
 
 echo "static int setformat_base(char *soundfile_format){"
