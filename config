@@ -1,10 +1,13 @@
-# Config file for jack_capture. Only long-form switches work (i.e. those starting with --).
- 
+# Config file for jack_capture.
+
+# Only long-form switches work (i.e. those starting with --).
+# Options given here can be overriden with command line argument to jack_capture.
+
 
 # Copy the file here: ~/.jack_capture/config
 
 
-# A line either be:
+# A line can be one of:
 # 1. <variable> = <value>
 # 2. <switch>
 # 3. # <anything> (a comment)
