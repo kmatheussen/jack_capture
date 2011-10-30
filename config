@@ -1,7 +1,7 @@
 # Config file for jack_capture.
 
-# Only long-form switches work (i.e. those starting with --).
-# Options given here can be overriden with command line argument to jack_capture.
+# Only long-form options work (i.e. those starting with --).
+# Options given here can in many cases be overriden with command line argument to jack_capture.
 
 
 # Copy the file here: ~/.jack_capture/config
