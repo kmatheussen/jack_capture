@@ -1,0 +1,41 @@
+# Config file for jack_capture. Only long-form switches work (i.e. those starting with --).
+ 
+
+# Copy the file here: ~/.jack_capture/config
+
+
+# A line either be:
+# 1. <variable> = <value>
+# 2. <switch>
+# 3. # <anything> (a comment)
+
+
+# Variables and switches:
+#
+# duration = n
+# filename-prefix = s
+# leading-zeros = n
+# format = format
+# print-formats
+# version
+# silent
+# verbose
+# mp3
+# mp3-quality = n
+# mp3-bitrate = n
+# write-to-stdout
+# disable-meter
+# hide-buffer-usage
+# disable-console
+# daemon
+# linear-meter
+# dB-meter-reference = n
+# meterbridge
+# meterbridge-type type
+# meterbridge-reference = level
+# jack-transport
+# jack-transport-multi
+# manual-connections
+# bufsize = s
+# maxbufsize
+# filename filename
