@@ -40,5 +40,5 @@
 # jack-transport-multi
 # manual-connections
 # bufsize = s
-# maxbufsize
-# filename filename
+# maxbufsize = s
+# filename = filename
