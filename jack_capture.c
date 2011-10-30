@@ -1900,6 +1900,10 @@ char **read_config(int *argc,int max_size){
       if(strlen(name)>0 && strlen(value)>0){
         argv[*argc]   = string_concat("--",name);
         *argc = *argc + 1;
+
+        if(value[0]=='~')
+          value = string_concat(getenv("HOME"),&value[1]);
+
         argv[*argc] = value;
         *argc = *argc + 1;    
         //printf("pos: %d -%s- -%s-\n",split_pos,name,value);
