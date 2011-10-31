@@ -1834,22 +1834,23 @@ char *string_concat(char *s1,char *s2){
 }
 
 int string_charpos(char *s, char c){
-  int pos;
-  for(pos=0;;pos++){
+  int pos=0;
+  while(s[pos]!=0){
     if(s[pos]==c)
       return pos;
-    if(s[pos]==0)
-      return -1;
+    pos++;
   }
+  return -1;
 }
 
 char *substring(char *s,int start,int end){
-  char *ret=calloc(1,end-start+1);
-  int read_pos;
-  int write_pos = 0;
-  for(read_pos=start;read_pos<end;read_pos++){
-    ret[write_pos++] = s[read_pos];
-  }
+  char *ret       = calloc(1,end-start+1);
+  int   read_pos  = start;
+  int   write_pos = 0;
+
+  while(read_pos<end)
+    ret[write_pos++] = s[read_pos++];
+
   return ret;
 }
 
@@ -1877,6 +1878,9 @@ char *strip_whitespace(char *s){
 char **read_config(int *argc,int max_size){
   char **argv=calloc(max_size,sizeof(char*));
   *argc = 0;
+
+  if(getenv("HOME")==NULL)
+    return argv;
 
   FILE *file = fopen(string_concat(getenv("HOME"), "/.jack_capture/config"),"r");
   if(file==NULL)
@@ -2073,18 +2077,20 @@ void stop_recording_and_cleanup(void){
 
 
 void append_argv(char **v1,char **v2,int len1,int len2,int max_size){
-  int write_pos;
-  int read_pos = 0;
-  for(write_pos = len1; write_pos<len1+len2; write_pos++){
-    if(write_pos==max_size){
-      fprintf(stderr,"Too many arguments.\n");
-      exit(-3);
-    }
-    //printf("v1[%d] = %s\n",write_pos,v2[read_pos]);
-    v1[write_pos] = v2[read_pos++];    
+  int write_pos = len1;
+  int read_pos  = 0;
+
+  if(len1+len2>=max_size){
+    fprintf(stderr,"Too many arguments.\n");
+    exit(-3);
   }
+
+  while(write_pos<len1+len2)
+    v1[write_pos++] = v2[read_pos++];    
 }
 
+
+#if 0
 void print_argv(char **argv,int argc){
   int i=0;
   printf("print arguments. argc: %d. ",argc);
@@ -2093,6 +2099,8 @@ void print_argv(char **argv,int argc){
   }
   printf("-- finished. \n");
 }
+#endif
+
 
 int main (int argc, char *argv[]){
   //get_free_mem();
