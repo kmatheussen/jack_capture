@@ -1886,35 +1886,35 @@ char **read_config(int *argc,int max_size){
   if(file==NULL)
     return argv;
 
-  char *line = malloc(512);
-  while(fgets(line,510,file)!=NULL){
+  char *readline = malloc(512);
+  while(fgets(readline,510,file)!=NULL){
+    char *line = strip_whitespace(readline);
+    if(line[0]==0 || line[0]=='#')
+      continue;
+
     if(*argc>=max_size-3){
       fprintf(stderr,"Too many arguments in config file.\n");
       exit(-2);
     }
-
-    line = strip_whitespace(line);
-    if(line[0]==0 || line[0]=='#')
-      continue;
 
     int split_pos = string_charpos(line,'=');
     if(split_pos!=-1){
       char *name = strip_whitespace(substring(line,0,split_pos));
       char *value = strip_whitespace(substring(line,split_pos+1,strlen(line)));
       if(strlen(name)>0 && strlen(value)>0){
-        argv[*argc]   = string_concat("--",name);
-        *argc = *argc + 1;
+        argv[*argc] = string_concat("--",name);
+        *argc       = *argc + 1;
 
         if(value[0]=='~')
           value = string_concat(getenv("HOME"),&value[1]);
 
         argv[*argc] = value;
-        *argc = *argc + 1;    
+        *argc       = *argc + 1;    
         //printf("pos: %d -%s- -%s-\n",split_pos,name,value);
       }
     }else{
       argv[*argc] = string_concat("--",line);
-      *argc = *argc + 1;   
+      *argc       = *argc + 1;   
     }
   }
 
