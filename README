@@ -212,7 +212,7 @@ CHANGES
    please do so.
  * Fix bug which in theory could cause malformed sound data to be 
    sent to stdout.
- * Fix bug that caused longer durations than 2^31 seconds to fail
+ * Fix bug that caused longer durations than 2^31 frames to fail
    (when using the --duration switch).
    (Caused by a function returning int instead of int64_t.)
    Thanks to Dan Muresan for pointing out the bug.
