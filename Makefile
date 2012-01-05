@@ -16,6 +16,8 @@ LINKFLAGS=-ljack -lsndfile -lm -lpthread
 
 targets = jack_capture
 
+# TODO: configuration option
+COMPILEFLAGS+=-DEXEC_HOOKS
 
 all: check_dependencies jack_capture
 

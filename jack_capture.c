@@ -120,6 +120,12 @@ static int das_lame_quality = 2; // 0 best, 9 worst.
 static int das_lame_bitrate = -1;
 static bool use_jack_transport = false;
 static bool use_manual_connections = false;
+#ifdef EXEC_HOOKS
+static char *hook_cmd_opened = NULL;
+static char *hook_cmd_closed = NULL;
+static char *hook_cmd_rotate = NULL;
+#endif
+
 
 /* JACK data */
 static jack_port_t **ports;
@@ -777,7 +783,169 @@ static void stop_helper_thread(void){
   */
 }
 
+/////////////////////////////////////////////////////////////////////
+//////////////////////// DISK Thread hooks //////////////////////////
+/////////////////////////////////////////////////////////////////////
 
+#ifdef EXEC_HOOKS
+#include <libgen.h>
+
+#ifndef __USE_GNU
+/* This code has been derived from an example in the glibc2 documentation.
+ * "asprintf() implementation for braindamaged operating systems"
+ * Copyright (C) 1991, 1994-1999, 2000, 2001 Free Software Foundation, Inc.
+ */
+#ifdef _WIN32
+#define vsnprintf _vsnprintf
+#endif
+int asprintf(char **buffer, char *fmt, ...) {
+    /* Guess we need no more than 200 chars of space. */
+    int size = 200;
+    int nchars;
+    va_list ap;
+
+    *buffer = (char*)malloc(size);
+    if (*buffer == NULL) return -1;
+
+    /* Try to print in the allocated space. */
+    va_start(ap, fmt);
+    nchars = vsnprintf(*buffer, size, fmt, ap);
+    va_end(ap);
+
+    if (nchars >= size)
+    {
+        char *tmpbuff;
+        /* Reallocate buffer now that we know how much space is needed. */
+        size = nchars+1;
+        tmpbuff = (char*)realloc(*buffer, size);
+
+        if (tmpbuff == NULL) { /* we need to free it*/
+            free(*buffer);
+            return -1;
+        }
+
+        *buffer=tmpbuff;
+        /* Try again. */
+        va_start(ap, fmt);
+        nchars = vsnprintf(*buffer, size, fmt, ap);
+        va_end(ap);
+    }
+
+    if (nchars < 0) return nchars;
+    return size;
+}
+#endif
+
+#define ARGS_ADD_ARGV(FMT,ARG) \
+  argv=(char**) realloc((void*)argv, (argc+2)*sizeof(char*)); \
+  asprintf(&argv[argc++], FMT, ARG); argv[argc] = 0;
+
+#define PREPARE_ARGV(CMD,ARGC,ARGV) \
+{\
+  char *bntmp = strdup(CMD); \
+  ARGC=0; \
+  ARGV=(char**) calloc(2,sizeof(char*)); \
+  ARGV[ARGC++] = strdup(basename(bntmp));\
+  free(bntmp); \
+}
+
+static void call_hook(const char *cmd, int argc, char **argv){
+  /* invoke external command */
+  if (verbose==true) {
+    fprintf(stderr, "EXE: %s ", cmd);
+    for (argc=0;argv[argc];++argc) printf("'%s' ", argv[argc]);
+    printf("\n");
+  }
+
+  pid_t pid=fork();
+
+  if (pid==0) {
+    /* child process */
+
+    if(1){ /* redirect all output of child process*/
+      int fd;
+      if((fd = open("/dev/null", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR))==-1){
+	perror("open");
+      }else{
+	dup2(fd,STDOUT_FILENO);
+	dup2(fd,STDERR_FILENO);
+	close(fd);
+      }
+    }
+    execvp (cmd, (char *const *) argv);
+    fprintf(stderr,"EXE: error; exec returned.\n");
+    //pause();
+    exit(127);
+  }
+
+  /* parent/main process */
+  if (pid < 0 ) {
+    fprintf(stderr,"EXE: error; can not fork child process\n");
+  } else {
+#if 0 // may come in handy? -- allow hooks to terminate recording. TODO
+    if (want_wait) {
+      int rv;
+      waitpid(pid, &rv, 0);
+      if (!silent)
+        printf("EXE: retuned: %i\n", rv); // TODO use WEXITSTATUS..
+
+      if (want_quit && rv) {
+        if (WIFEXITED(rv)) {
+          if (!silent)
+            fprintf(stderr, "EXE: error; Child exited with status: %d \n",WEXITSTATUS(rv));
+          exit(WEXITSTATUS(rv));
+        }
+        if (WIFSIGNALED(rv)) {
+          if (!silent)
+            fprintf(stderr, "EXE: error; Child exited via signal: %d\n",WTERMSIG(rv));
+          exit(1);
+        }
+        exit(-1);
+      }
+    }
+#endif
+  }
+
+  /* clean up */
+  for (argc=0;argv[argc];++argc) {
+    free(argv[argc]);
+  }
+  free (argv);
+}
+
+static void hook_file_opened(char *fn){
+  char **argv; int argc;
+  const char *cmd = hook_cmd_opened;
+  if (!cmd) return;
+  PREPARE_ARGV(cmd, argc, argv);
+  ARGS_ADD_ARGV("%s", fn);
+  call_hook(cmd, argc, argv);
+}
+
+static void hook_file_closed(char *fn, int xruns, int io_errors){
+  char **argv; int argc;
+  const char *cmd = hook_cmd_closed;
+  if (!cmd) return;
+  PREPARE_ARGV(cmd, argc, argv);
+  ARGS_ADD_ARGV("%s", fn);
+  ARGS_ADD_ARGV("%d", xruns);
+  ARGS_ADD_ARGV("%d", io_errors);
+  call_hook(cmd, argc, argv);
+}
+
+static void hook_file_rotated(char *oldfn, char *newfn, int num, int xruns, int io_errors){
+  char **argv; int argc;
+  const char *cmd = hook_cmd_rotate;
+  if (!cmd) return;
+  PREPARE_ARGV(cmd, argc, argv);
+  ARGS_ADD_ARGV("%s", oldfn);
+  ARGS_ADD_ARGV("%d", xruns);
+  ARGS_ADD_ARGV("%d", io_errors);
+  ARGS_ADD_ARGV("%s", newfn);
+  ARGS_ADD_ARGV("%d", num);
+  call_hook(cmd, argc, argv);
+}
+#endif
 
 
 /////////////////////////////////////////////////////////////////////
@@ -839,6 +1007,9 @@ static int open_mp3file(void){
     return 0;
   }
 
+#ifdef EXEC_HOOKS
+	hook_file_opened(filename);
+#endif
   return 1;
 }
 #endif
@@ -853,13 +1024,16 @@ static int open_soundfile(void){
 
   SF_INFO sf_info; memset(&sf_info,0,sizeof(sf_info));
 
-  if(write_to_stdout==true)
+  if(write_to_stdout==true) {
+#ifdef EXEC_HOOKS
+	hook_file_opened("file:///stdout");
+#endif
     return 1;
+	}
 
 
   if(filename==NULL)
     filename=strdup(base_filename);
-
 
 #if HAVE_LAME
   if(write_to_mp3==true)
@@ -934,6 +1108,10 @@ static int open_soundfile(void){
     return 0;
   }
 
+#ifdef EXEC_HOOKS
+  hook_file_opened(filename);
+#endif
+
   return 1;
 }
 
@@ -951,6 +1129,10 @@ static void close_soundfile(void){
 #endif
   }
 
+#ifdef EXEC_HOOKS
+  hook_file_closed(filename, total_overruns, disk_errors);
+#endif
+
   if (overruns > 0) {
     print_message("jack_capture failed with a total of %d overruns.\n", total_overruns);
     print_message("   try a bigger buffer than -B %f\n",min_buffer_time);
@@ -959,6 +1141,26 @@ static void close_soundfile(void){
     print_message("jack_capture failed with a total of %d disk errors.\n",disk_errors);
 }
 
+static int rotate_file(){
+  sf_close(soundfile);
+
+  char *filename_new;
+  filename_new=my_calloc(1,strlen(base_filename)+500);
+  sprintf(filename_new,"%s.%0*d.wav",base_filename,2,num_files);
+  print_message("Closing %s, and continue writing to %s.\n",filename,filename_new);
+  num_files++;
+
+#ifdef EXEC_HOOKS
+  hook_file_rotated(filename, filename_new, num_files, total_overruns, disk_errors);
+#endif
+
+  free(filename);
+  filename=filename_new;
+  disksize=0;
+  if(!open_soundfile()) return 0;
+
+  return 1;
+}
 
 // To test filelimit handler, uncomment two next lines.
 //#undef UINT32_MAX
@@ -968,22 +1170,8 @@ static int handle_filelimit(size_t frames){
   int new_bytes=frames*bytes_per_frame*num_channels;
 
   if(is_using_wav && (disksize + ((int64_t)new_bytes) >= UINT32_MAX-(1024*1024))){ // (1024*1024) should be enough for the header.
-
-    sf_close(soundfile);{
-
-      char *filename_new;
-      filename_new=my_calloc(1,strlen(base_filename)+500);      
-      sprintf(filename_new,"%s.%0*d.wav",base_filename,2,num_files);
-      print_message("Warning. 4GB limit on wav file almost reached. Closing %s, and continue writing to %s.\n",filename,filename_new);
-      num_files++;
-      free(filename);
-      filename=filename_new;
-      disksize=0;
-    }
-
-    if(!open_soundfile())
-      return 0;
-
+    print_message("Warning. 4GB limit on wav file almost reached.");
+    if (!rotate_file()) return 0;
   }
 
   disksize+=new_bytes;
@@ -1692,6 +1880,11 @@ static const char *advanced_help =
   "                                    recording when needed. But it will never go beyond this size.)\n"
   "[--filename] or [-fn]            -> Specify filename.\n"
   "                                    (It's usually easier to set last argument instead)\n"
+#ifdef EXEC_HOOKS
+  "[--hook-open] or [-Ho]           -> Specify command to execute on successful file-open.\n"
+  "[--hook-close] or [-Hc]          -> Specify command to execute on closing the file.\n"
+  "[--hook-rotate] or [-Hr]         -> Specify command to execute on file-name-rotation.\n"
+#endif
   "\n"
   "Examples:\n"
   "\n"
@@ -1783,6 +1976,11 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--jack-transport","-jt") use_jack_transport=true;
       OPTARG("--manual-connections","-mc") use_manual_connections=true;
       OPTARG("--filename","-fn") base_filename=OPTARG_GETSTRING();
+#ifdef EXEC_HOOKS
+      OPTARG("--hook-open","-Ho")   hook_cmd_opened = OPTARG_GETSTRING();
+      OPTARG("--hook-close","-Hc")  hook_cmd_closed = OPTARG_GETSTRING();
+      OPTARG("--hook-rotate","-Hr") hook_cmd_rotate = OPTARG_GETSTRING();
+#endif
       OPTARG_LAST() base_filename=OPTARG_GETSTRING();
     }OPTARGS_END;
 
