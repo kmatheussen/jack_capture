@@ -16,6 +16,11 @@ LINKFLAGS=-ljack -lsndfile -lm -lpthread
 
 targets = jack_capture
 
+# TODO: configure target after check_dependencies:
+# #pkg-config --exists liblo
+COMPILEFLAGS+=-DHAVE_LIBLO `pkg-config --cflags liblo`
+LINKFLAGS+=`pkg-config --libs liblo`
+
 # TODO: configuration option
 COMPILEFLAGS+=-DEXEC_HOOKS
 
@@ -54,8 +59,8 @@ dist: clean
 	rm -fr jack_capture-$(VERSION)
 
 
-jack_capture: setformat.c jack_capture.c vringbuffer.c Makefile das_config.h config_flags
-	$(CC) $(COMPILEFLAGS) jack_capture.c vringbuffer.c -o jack_capture $(LINKFLAGS) `cat config_flags`
+jack_capture: setformat.c jack_capture.c vringbuffer.c osc.c Makefile das_config.h config_flags
+	$(CC) $(COMPILEFLAGS) jack_capture.c vringbuffer.c osc.c -o jack_capture $(LINKFLAGS) `cat config_flags`
 
 
 jack_capture_gui2: jack_capture_gui2.cpp

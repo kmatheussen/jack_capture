@@ -50,6 +50,12 @@
 #if HAVE_LAME
 #include <lame/lame.h>
 #endif
+#if HAVE_LIBLO
+#include <lo/lo.h>
+/* defined in osc.c */
+int  init_osc(int osc_port);
+void shutdown_osc(void);
+#endif
 
 #include "vringbuffer.h"
 
@@ -112,8 +118,8 @@ static char *soundfile_format_one_or_two="wav";
 #define ONE_OR_TWO_CHANNELS_FORMAT SF_FORMAT_WAV
 static char *soundfile_format_multi="wavex";
 #define MORE_THAN_TWO_CHANNELS_FORMAT SF_FORMAT_WAVEX
-static bool silent=false;
-static bool verbose=false;
+bool silent=false;
+bool verbose=false;
 static bool absolutely_quiet=false;
 static bool write_to_stdout=false;
 static bool write_to_mp3 = false;
@@ -121,6 +127,9 @@ static int das_lame_quality = 2; // 0 best, 9 worst.
 static int das_lame_bitrate = -1;
 static bool use_jack_transport = false;
 static bool use_manual_connections = false;
+#ifdef HAVE_LIBLO
+static int osc_port = -1;
+#endif
 #ifdef EXEC_HOOKS
 static char *hook_cmd_opened = NULL;
 static char *hook_cmd_closed = NULL;
@@ -964,6 +973,11 @@ static int bytes_per_frame;
 static SNDFILE *soundfile=NULL;
 static int64_t overruns=0;
 
+#if HAVE_LIBLO
+bool queued_file_rotate=false;
+void osc_stop() { sem_post(&stop_sem); }
+#endif
+
 #if HAVE_LAME
 static FILE *mp3file = NULL;
 static unsigned char *mp3buf;
@@ -1176,7 +1190,13 @@ static int handle_filelimit(size_t frames){
     print_message("Warning. 4GB limit on wav file almost reached.");
     if (!rotate_file()) return 0;
   }
-
+#ifdef HAVE_LIBLO
+  else if (queued_file_rotate) {
+    queued_file_rotate=false;
+    print_message("Note. file-name rotation request received.");
+    if (!rotate_file()) return 0;
+  }
+#endif
   disksize+=new_bytes;
   return 1;
 }
@@ -1883,6 +1903,9 @@ static const char *advanced_help =
   "                                    recording when needed. But it will never go beyond this size.)\n"
   "[--filename] or [-fn]            -> Specify filename.\n"
   "                                    (It's usually easier to set last argument instead)\n"
+#ifdef HAVE_LIBLO
+  "[--osc] or [-O]                  -> Specify OSC port number to liste on.\n"
+#endif
 #ifdef EXEC_HOOKS
   "[--hook-open] or [-Ho]           -> Specify command to execute on successful file-open.\n"
   "[--hook-close] or [-Hc]          -> Specify command to execute on closing the file.\n"
@@ -1980,6 +2003,9 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--jack-transport","-jt") use_jack_transport=true;
       OPTARG("--manual-connections","-mc") use_manual_connections=true;
       OPTARG("--filename","-fn") base_filename=OPTARG_GETSTRING();
+#ifdef HAVE_LIBLO
+      OPTARG("--osc","-O") osc_port=atoi(OPTARG_GETSTRING());
+#endif
 #ifdef EXEC_HOOKS
       OPTARG("--hook-open","-Ho")   hook_cmd_opened = OPTARG_GETSTRING();
       OPTARG("--hook-close","-Hc")  hook_cmd_closed = OPTARG_GETSTRING();
@@ -2267,6 +2293,9 @@ void stop_recording_and_cleanup(void){
   
   stop_helper_thread();
 
+#ifdef HAVE_LIBLO
+  shutdown_osc();
+#endif
 
   if(silent==false){
     usleep(50); // wait for terminal
@@ -2319,6 +2348,13 @@ int main (int argc, char *argv[]){
   //print_argv(c_argv,c_argc+argc);
 
   init_arguments(c_argc+argc,c_argv);
+
+#ifdef HAVE_LIBLO
+  if (init_osc(osc_port)) {
+    /* no OSC available */
+    osc_port=-1;
+  }
+#endif
 
   init_various();
 
