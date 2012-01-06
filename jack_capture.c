@@ -121,6 +121,9 @@ static char *soundfile_format_multi="wavex";
 bool silent=false;
 bool verbose=false;
 static bool absolutely_quiet=false;
+#ifdef STORE_SYNC
+static bool create_tme_file=false;
+#endif
 static bool write_to_stdout=false;
 static bool write_to_mp3 = false;
 static int das_lame_quality = 2; // 0 best, 9 worst.
@@ -134,8 +137,8 @@ static int osc_port = -1;
 static char *hook_cmd_opened = NULL;
 static char *hook_cmd_closed = NULL;
 static char *hook_cmd_rotate = NULL;
+static char *hook_cmd_timing = NULL;
 #endif
-
 
 /* JACK data */
 static jack_port_t **ports;
@@ -214,6 +217,7 @@ void get_free_mem(void){
          sys_info.freeram / 1024);
 }
 #endif
+char *string_concat(char *s1,char *s2);
 
 static void verbose_print(const char *fmt, ...){
   if (absolutely_quiet==true) return;
@@ -911,6 +915,18 @@ static void hook_file_opened(char *fn){
   call_hook(cmd, argc, argv);
 }
 
+static void hook_rec_timimg(char *fn, struct timespec start, jack_nframes_t latency){
+  char **argv; int argc;
+  const char *cmd = hook_cmd_timing;
+  if (!cmd) return;
+  PREPARE_ARGV(cmd, argc, argv);
+  ARGS_ADD_ARGV("%s", fn);
+  ARGS_ADD_ARGV("%ld", start.tv_sec);
+  ARGS_ADD_ARGV("%ld", start.tv_nsec);
+  ARGS_ADD_ARGV("%d", latency);
+  call_hook(cmd, argc, argv);
+}
+
 static void hook_file_closed(char *fn, int xruns, int io_errors){
   char **argv; int argc;
   const char *cmd = hook_cmd_closed;
@@ -953,6 +969,12 @@ static int64_t overruns=0;
 #if HAVE_LIBLO
 bool queued_file_rotate=false;
 void osc_stop() { sem_post(&stop_sem); }
+#endif
+
+#ifdef STORE_SYNC
+static struct timespec rtime;
+static int store_sync = 0;
+static jack_nframes_t j_latency = 0;
 #endif
 
 #if HAVE_LAME
@@ -1136,6 +1158,14 @@ static void close_soundfile(void){
 }
 
 static int rotate_file(){
+#ifdef STORE_SYNC
+	store_sync=0;
+	// XXX - new file actually already contains CURRENT buffer!
+	// TODO subtract 1[?] audio period from upcoming timestamp
+	// or take time NOW; and subtract sample-count in rinbuffer (more jitter)
+	// best: timestamp EACH frame :(
+#endif
+
   sf_close(soundfile);
 
   char *filename_new;
@@ -1152,6 +1182,7 @@ static int rotate_file(){
   filename=filename_new;
   disksize=0;
   if(!open_soundfile()) return 0;
+
 
   return 1;
 }
@@ -1315,8 +1346,40 @@ static void disk_callback(vringbuffer_t *vrb,bool first_time,void *element){
     print_message("Received JackTranportRolling. Recording.\n");
     printed_receive_message=true;
   }
-
   disk_thread_control_priority();
+
+#ifdef STORE_SYNC
+  if (store_sync==1) {
+    store_sync=2;
+#ifdef EXEC_HOOKS
+    hook_rec_timimg(filename, rtime, j_latency);
+#endif
+
+    if (create_tme_file) { // write .tme info-file
+#if 1 //subtract port latency.
+      int64_t lat_nsec = 1000000000 * j_latency / jack_samplerate;
+      int64_t lat_sec = lat_nsec/1000000000;
+      lat_nsec = lat_nsec%1000000000;
+
+      if (rtime.tv_nsec > lat_nsec) rtime.tv_nsec-=lat_nsec; else {rtime.tv_nsec+=1000000000-lat_nsec; rtime.tv_sec--;}
+      rtime.tv_sec-=lat_sec;
+#endif
+      FILE *file = fopen(string_concat(filename, ".tme"),"w");
+      if(file) {
+	fprintf(file, "%ld.%ld\n", rtime.tv_sec, rtime.tv_nsec); 
+	fprintf(file, "# port-latency: %d frames\n", j_latency);
+	fprintf(file, "# sample-rate : %f samples/sec\n", jack_samplerate);
+
+	char tme[64]; struct tm time;
+	gmtime_r(&rtime.tv_sec, &time);
+	strftime(tme, 63, "%F %T", &time);
+	fprintf(file, "# system-time : %s.%ld UTC\n", tme, rtime.tv_nsec);
+
+	fclose(file);
+      }
+    }
+  }
+#endif
 
   if( buffer->overruns > 0)
     disk_write_overruns(buffer->overruns);
@@ -1458,6 +1521,13 @@ static int process(jack_nframes_t nframes, void *arg){
 
   if(process_state==RECORDING_FINISHED)
     return 0;
+
+#ifdef STORE_SYNC
+	if (store_sync==0) {
+		clock_gettime(CLOCK_REALTIME, &rtime);
+		store_sync=1;
+	}
+#endif
 
   if(wait_for_keyboard==false){     // User has specified a duration
     int num_frames;
@@ -1741,7 +1811,23 @@ static void freewheelcallback(int starting, void *arg){
   freewheel_mode = starting;
 }
 
+#ifdef STORE_SYNC
+static void jack_latency_cb(jack_latency_callback_mode_t mode, void *arg) {
+	int ch;
+	jack_latency_range_t jlty;
+	jack_nframes_t max_latency = 0;
 
+	if (mode != JackCaptureLatency) return;
+	if (!ports) return;
+
+	for(ch=0;ch<num_channels;ch++) {
+		if(ports[ch]==0) continue;
+		jack_port_get_latency_range(ports[ch], JackCaptureLatency, &jlty);
+		if (jlty.max > max_latency) max_latency= jlty.max;
+	}
+	j_latency = max_latency;
+}
+#endif
 
 static void create_ports(void){
   ports = (jack_port_t **) my_calloc (sizeof (jack_port_t *),num_channels);  
@@ -1883,10 +1969,17 @@ static const char *advanced_help =
 #ifdef HAVE_LIBLO
   "[--osc] or [-O]                  -> Specify OSC port number to liste on.\n"
 #endif
+#ifdef STORE_SYNC
+  "[--timestamp] or [-S]            -> create a FILENAME.tme file for each recording, storing\n"
+  "                                    the system-time corresponding to the first audio sample.\n"
+#endif
 #ifdef EXEC_HOOKS
   "[--hook-open] or [-Ho]           -> command to execute on successful file-open.\n"
   "[--hook-close] or [-Hc]          -> command to execute on closing the file.\n"
   "[--hook-rotate] or [-Hr]         -> command to execute on file-name-rotation.\n"
+# ifdef STORE_SYNC
+  "[--hook-timing] or [-Ht]         -> callback when first audio frame is received.\n"
+# endif
   "\n"
   " All hook options take a path to an executable as argument.\n"
   " The commands are executed in a fire-and-forget style upon internal events.\n"
@@ -1894,6 +1987,7 @@ static const char *advanced_help =
   "  open:   CMD <filename>\n"
   "  close:  CMD <filename> <xrun-count> <io-error-count>\n"
   "  rotate: CMD <filename> <xrun-count> <io-error-count> <new-filename> <seq-number>\n"
+  "  timing: CMD <filename> <time-sec> <time-nses> <jack-port-latency in frames>\n"
 #endif
   "\n"
   "Examples:\n"
@@ -1994,6 +2088,12 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--hook-open","-Ho")   hook_cmd_opened = OPTARG_GETSTRING();
       OPTARG("--hook-close","-Hc")  hook_cmd_closed = OPTARG_GETSTRING();
       OPTARG("--hook-rotate","-Hr") hook_cmd_rotate = OPTARG_GETSTRING();
+# ifdef STORE_SYNC
+      OPTARG("--hook-timing","-Ht") hook_cmd_timing = OPTARG_GETSTRING();
+# endif
+#endif
+#ifdef STORE_SYNC
+      OPTARG("--timestamp","-S") create_tme_file=true;
 #endif
       OPTARG_LAST() base_filename=OPTARG_GETSTRING();
     }OPTARGS_END;
@@ -2176,6 +2276,10 @@ void init_various(void){
     jack_set_process_callback(client, process, NULL);
 
     jack_on_shutdown(client, jack_shutdown, NULL);
+
+#ifdef STORE_SYNC
+    jack_set_latency_callback (client, jack_latency_cb, NULL);
+#endif
 
     if(use_manual_connections==false)
       jack_set_graph_order_callback(client,graphordercallback,NULL);
