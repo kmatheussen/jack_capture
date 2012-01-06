@@ -885,37 +885,14 @@ static void call_hook(const char *cmd, int argc, char **argv){
       }
     }
     execvp (cmd, (char *const *) argv);
-    fprintf(stderr,"EXE: error; exec returned.\n");
+    print_message("EXE: error; exec returned.\n");
     //pause();
     exit(127);
   }
 
   /* parent/main process */
   if (pid < 0 ) {
-    fprintf(stderr,"EXE: error; can not fork child process\n");
-  } else {
-#if 0 // may come in handy? -- allow hooks to terminate recording. TODO
-    if (want_wait) {
-      int rv;
-      waitpid(pid, &rv, 0);
-      if (!silent)
-        printf("EXE: retuned: %i\n", rv); // TODO use WEXITSTATUS..
-
-      if (want_quit && rv) {
-        if (WIFEXITED(rv)) {
-          if (!silent)
-            fprintf(stderr, "EXE: error; Child exited with status: %d \n",WEXITSTATUS(rv));
-          exit(WEXITSTATUS(rv));
-        }
-        if (WIFSIGNALED(rv)) {
-          if (!silent)
-            fprintf(stderr, "EXE: error; Child exited via signal: %d\n",WTERMSIG(rv));
-          exit(1);
-        }
-        exit(-1);
-      }
-    }
-#endif
+    print_message("EXE: error; can not fork child process\n");
   }
 
   /* clean up */
@@ -1907,9 +1884,16 @@ static const char *advanced_help =
   "[--osc] or [-O]                  -> Specify OSC port number to liste on.\n"
 #endif
 #ifdef EXEC_HOOKS
-  "[--hook-open] or [-Ho]           -> Specify command to execute on successful file-open.\n"
-  "[--hook-close] or [-Hc]          -> Specify command to execute on closing the file.\n"
-  "[--hook-rotate] or [-Hr]         -> Specify command to execute on file-name-rotation.\n"
+  "[--hook-open] or [-Ho]           -> command to execute on successful file-open.\n"
+  "[--hook-close] or [-Hc]          -> command to execute on closing the file.\n"
+  "[--hook-rotate] or [-Hr]         -> command to execute on file-name-rotation.\n"
+  "\n"
+  " All hook options take a path to an executable as argument.\n"
+  " The commands are executed in a fire-and-forget style upon internal events.\n"
+  " Paramaters passed to the hook-scripts:\n"
+  "  open:   CMD <filename>\n"
+  "  close:  CMD <filename> <xrun-count> <io-error-count>\n"
+  "  rotate: CMD <filename> <xrun-count> <io-error-count> <new-filename> <seq-number>\n"
 #endif
   "\n"
   "Examples:\n"
