@@ -108,6 +108,7 @@ static char *filename_prefix="jack_capture_";
 static int64_t num_frames_recorded=0;
 static int64_t num_frames_to_record=0;
 static bool wait_for_keyboard=true;
+static bool fixed_duration=false;
 static bool no_stdin=false;
 static double recording_time=0.0;
 static const int disk_error_stop=0;
@@ -1527,7 +1528,7 @@ static int process(jack_nframes_t nframes, void *arg){
 	}
 #endif
 
-  if(wait_for_keyboard==false){     // User has specified a duration
+  if(fixed_duration==true){     // User has specified a duration
     int num_frames;
     
     num_frames=JC_MIN(nframes,num_frames_to_record - num_frames_recorded);
@@ -2062,7 +2063,7 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--version","-v") puts(VERSION);exit(0);
       OPTARG("--silent","-s") silent=true;
       OPTARG("--verbose","-V") verbose=true;
-      OPTARG("--quiet","-q") { absolutely_quiet=true; use_vu=false; silent=true; show_bufferusage=false;}
+      OPTARG("--quiet","-q") { absolutely_quiet=true; use_vu=false; silent=true; show_bufferusage=false; wait_for_keyboard=false;}
       OPTARG("--print-formats","-pf") print_all_formats();exit(0);
       OPTARG("--mp3","-mp3") write_to_mp3 = true;
       OPTARG("--mp3-quality","-mp3q") das_lame_quality = OPTARG_GETINT(); write_to_mp3 = true;
@@ -2314,7 +2315,7 @@ void init_various(void){
   verbose_print("main() Print some info.\n");
   // Print some info
   {
-    if(wait_for_keyboard==false){     // User has specified a duration
+    if(wait_for_keyboard==false && fixed_duration==true){     // User has specified a duration
       if(silent==false)
         print_message(
                     "Recording to \"%s\". The recording is going\n"
