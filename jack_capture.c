@@ -1,6 +1,6 @@
 
 /*
-  Kjetil Matheussen, 2005-2011.
+  Kjetil Matheussen, 2005-2012.
     
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -271,10 +271,6 @@ static int64_t seconds_to_frames(float seconds){
   return (int64_t) (((long double)seconds)*((long double)jack_samplerate));
 }
 
-
-static int seconds_to_minutes(float seconds){
-  return seconds/60;
-}
 
 static float frames_to_seconds(int frames){
   return ((float)frames)/jack_samplerate;
@@ -618,9 +614,8 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
     int   num_buffers = (vringbuffer_reading_size(vringbuffer)+ vringbuffer_writing_size(vringbuffer));
     float buflen      = buffers_to_seconds(num_buffers);
     float bufleft     = buffers_to_seconds(num_bufleft);
-    float recorded_seconds_float = frames_to_seconds(num_frames_recorded);
-    int   recorded_minutes = seconds_to_minutes(recorded_seconds_float);
-    int   recorded_seconds = (int)recorded_seconds_float - (60*recorded_minutes);
+    int   recorded_seconds = (int)frames_to_seconds(num_frames_recorded);
+    int   recorded_minutes = recorded_seconds/60;
     printf("%c[32m"
            "Buffer: %.2fs./%.2fs. "
            "  Time: %d.%s%dm.  %s"
@@ -630,7 +625,7 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
            //fmaxf(0.0f,buflen-bufleft),buflen,
            0x1b, // green color
            bufleft,buflen,
-           recorded_minutes, recorded_seconds<10?"0":"", recorded_seconds, recorded_minutes<1?" ":"", 
+           recorded_minutes, recorded_seconds%60<10?"0":"", recorded_seconds%60, recorded_minutes<10?" ":"", 
            disk_thread_has_high_priority?'x':' ',
            total_overruns,
            0x1b // reset color
