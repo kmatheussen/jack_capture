@@ -26,6 +26,13 @@ COMPILEFLAGS+=-DEXEC_HOOKS
 # TODO: configuration option
 COMPILEFLAGS+=-DSTORE_SYNC
 
+# TODO check libjack for jack_port_get_latency_range symbol
+ifeq ($(shell grep jack_port_get_latency_range /usr/lib/libjack.so &>/dev/null && echo yes), yes)
+  COMPILEFLAGS+="-DNEW_JACK_LATENCY_API"
+endif
+
+AC_SEARCH_LIBS(jack_port_get_latency_range, jack, AC_DEFINE(NEW_JACK_LATENCY_API) NEW_JACK_LATENCY_API=1 )
+
 all: check_dependencies jack_capture
 
 install: $(targets)

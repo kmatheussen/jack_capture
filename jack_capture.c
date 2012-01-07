@@ -1523,6 +1523,14 @@ static int process(jack_nframes_t nframes, void *arg){
 
 #ifdef STORE_SYNC
 	if (store_sync==0) {
+#ifndef NEW_JACK_LATENCY_API
+		int ch;
+		j_latency=0;
+		for(ch=0;ch<num_channels;ch++) {
+			const jack_nframes_t jpl= jack_port_get_total_latency(client,ports[ch]);
+			if (j_latency < jpl) j_latency = jpl;
+		}
+#endif
 		clock_gettime(CLOCK_REALTIME, &rtime);
 		store_sync=1;
 	}
@@ -1810,7 +1818,7 @@ static void freewheelcallback(int starting, void *arg){
   freewheel_mode = starting;
 }
 
-#ifdef STORE_SYNC
+#if (defined STORE_SYNC && defined NEW_JACK_LATENCY_API)
 static void jack_latency_cb(jack_latency_callback_mode_t mode, void *arg) {
 	int ch;
 	jack_latency_range_t jlty;
@@ -2277,7 +2285,7 @@ void init_various(void){
 
     jack_on_shutdown(client, jack_shutdown, NULL);
 
-#ifdef STORE_SYNC
+#if (defined STORE_SYNC && defined NEW_JACK_LATENCY_API)
     jack_set_latency_callback (client, jack_latency_cb, NULL);
 #endif
 
