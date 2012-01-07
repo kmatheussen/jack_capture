@@ -426,15 +426,13 @@ static void portnames_add(char *name){
   int add_ch;
 
   if(name[strlen(name)-1]=='*'){
-    char pattern[strlen(name)];
-
-    sprintf("%s",pattern,name);
-
+    char *pattern=strdup(name);
     pattern[strlen(name)-1]=0;
 
     new_outportnames          = jack_get_ports(client,pattern,"",0);
     //char **new_outportnames = (char**)jack_get_ports(client,"system:capture_1$","",0);
     add_ch                    = findnumports(new_outportnames);
+		free(pattern);
   }else{
     new_outportnames          = my_calloc(1,sizeof(char*));
     new_outportnames[0]       = name;
@@ -2051,8 +2049,9 @@ void init_arguments(int argc, char *argv[]){
         start_jack();
         num_frames_to_record=seconds_to_frames(recording_time);
         wait_for_keyboard=false;
+        fixed_duration=true;
       }
-      OPTARG("--port","-p") start_jack() ; portnames_add(OPTARG_GETSTRING());
+      OPTARG("--port","-p") { start_jack() ; portnames_add(OPTARG_GETSTRING()); }
       OPTARG("--format","-f"){
         soundfile_format=OPTARG_GETSTRING();
         if(!strcmp("mp3",soundfile_format)){
