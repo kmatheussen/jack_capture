@@ -1,6 +1,6 @@
 
 /*
-  Kjetil Matheussen, 2005-2010.
+  Kjetil Matheussen, 2005-2012.
     
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -226,20 +226,16 @@ static void verbose_print(const char *fmt, ...){
     va_list argp;
     va_start(argp,fmt);
     vfprintf(stderr,fmt,argp);
-    va_end(argp);
-  }
-}
+    va_end(argp); } }
 
 static void* my_calloc(size_t size1,size_t size2){
   size_t size = size1*size2;
   void*  ret  = malloc(size);
   if(ret==NULL){
     fprintf(stderr,"\nOut of memory. Try a smaller buffer.\n");
-    return NULL;
-  }
+    return NULL; }
   memset(ret,0,size);
-  return ret;
-}
+  return ret; }
 
 static bool set_high_priority(void){
   static bool shown_warning = false;
@@ -250,14 +246,12 @@ static bool set_high_priority(void){
   
   if(prio==0 && shown_warning==false){
     print_message("Warning. Could not set higher priority for a SCHED_FIFO process using setpriority().\n");
-    shown_warning=true;
-  }
+    shown_warning=true; }
 
   if(prio < 0)
     return true;
   else
-    return false;
-}
+    return false; }
 
 
 static int echo_turned_on=true;
@@ -270,15 +264,13 @@ static void turn_off_echo(void){
   current.c_lflag &= ~ECHO; // added
   tcsetattr( STDIN_FILENO, TCSANOW, &current );
 
-  echo_turned_on=false;
-}
+  echo_turned_on=false; }
 
 static void turn_on_echo(void){
   if(echo_turned_on==true)
     return;
   tcsetattr( STDIN_FILENO, TCSANOW, &initial );
-  echo_turned_on=true;
-}
+  echo_turned_on=true; }
 
 
 /////////////////////////////////////////////////////////////////////
@@ -301,11 +293,10 @@ static int64_t seconds_to_frames(float seconds){
   return (int64_t) (((long double)seconds)*((long double)jack_samplerate));
 }
 
-/*
+
 static float frames_to_seconds(int frames){
   return ((float)frames)/jack_samplerate;
 }
-*/
 
 // round up.
 static int seconds_to_blocks(float seconds){
@@ -337,8 +328,7 @@ static float buffers_to_seconds(int buffers){
 static int autoincrease_callback(vringbuffer_t *vrb, bool first_call, int reading_size, int writing_size){
   if(first_call){
     set_high_priority();
-    return 0;
-  }
+    return 0; }
 
 #if 0
   if(1){
@@ -347,9 +337,7 @@ static int autoincrease_callback(vringbuffer_t *vrb, bool first_call, int readin
     jack_transport_state_t state=jack_transport_query(client,&pos);
     if(state!=prev_state){
       print_message("frame: %d\n",pos.frame);
-      prev_state=state;
-    }
-  }
+      prev_state=state; } }
 #endif
 
   if(buffers_to_seconds(writing_size) < min_buffer_time)
@@ -646,12 +634,18 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
     int   num_buffers = (vringbuffer_reading_size(vringbuffer)+ vringbuffer_writing_size(vringbuffer));
     float buflen      = buffers_to_seconds(num_buffers);
     float bufleft     = buffers_to_seconds(num_bufleft);
-    printf("%c[32m",0x1b); // green color
-    printf("Buffer: %.2fs. / %.2fs. "
-           "Disk high priority: [%c]. "
-           "Overruns: %d%c[0m",
+    int   recorded_seconds = (int)frames_to_seconds(num_frames_recorded);
+    int   recorded_minutes = recorded_seconds/60;
+    printf("%c[32m"
+           "Buffer: %.2fs./%.2fs. "
+           "  Time: %d.%s%dm.  %s"
+           "DHP: [%c]  "
+           "Overruns: %d"
+           "%c[0m",
            //fmaxf(0.0f,buflen-bufleft),buflen,
+           0x1b, // green color
            bufleft,buflen,
+           recorded_minutes, recorded_seconds%60<10?"0":"", recorded_seconds%60, recorded_minutes<10?" ":"", 
            disk_thread_has_high_priority?'x':' ',
            total_overruns,
            0x1b // reset color
@@ -1207,8 +1201,7 @@ static int handle_filelimit(size_t frames){
   }
 #endif
   disksize+=new_bytes;
-  return 1;
-}
+  return 1; }
 
 
 
@@ -1222,8 +1215,7 @@ static int stdout_write(sample_t *buffer,size_t frames){
   if(bufferlen<bytes_to_write){
     free(tobuffer);
     tobuffer=my_calloc(1,bytes_to_write);
-    bufferlen=bytes_to_write;
-  }
+    bufferlen=bytes_to_write; }
 
   {
     unsigned int i;
@@ -1231,9 +1223,7 @@ static int stdout_write(sample_t *buffer,size_t frames){
     for(i=0;i<frames*num_channels;i++){
       int d = (int) rint(buffer[i]*32767.0);
       tobuffer[writeplace++] = (unsigned char) (d&0xff);
-      tobuffer[writeplace++] = (unsigned char) (((d&0xff00)>>8)&0xff);
-    }
-  }
+      tobuffer[writeplace++] = (unsigned char) (((d&0xff00)>>8)&0xff); } }
 
   {
     int   fd           = fileno(stdout);
@@ -1246,12 +1236,9 @@ static int stdout_write(sample_t *buffer,size_t frames){
 	break;
       }
       bytes_to_write -= written;
-      tobuffer_use   += written;
-    }
-  }
+      tobuffer_use   += written; } }
 
-  return 1;
-}
+  return 1; }
 
 #if HAVE_LAME
 static int mp3_write(void *das_data,size_t frames){
@@ -1330,10 +1317,7 @@ static void disk_thread_control_priority(void){
         static bool message_sent=false;
         if(message_sent==false)
           print_message("Error. Could not set higher priority for disk thread.\n");
-        message_sent=true;
-      }       
-    }
-}
+        message_sent=true; } } }
 
 
 static void disk_callback(vringbuffer_t *vrb,bool first_time,void *element){
@@ -1345,8 +1329,8 @@ static void disk_callback(vringbuffer_t *vrb,bool first_time,void *element){
 
   if(use_jack_transport==true && printed_receive_message==false){
     print_message("Received JackTranportRolling. Recording.\n");
-    printed_receive_message=true;
-  }
+    printed_receive_message=true; }
+
   disk_thread_control_priority();
 
 #ifdef STORE_SYNC
@@ -1393,8 +1377,7 @@ static void disk_callback(vringbuffer_t *vrb,bool first_time,void *element){
   if( buffer->overruns > 0)
     disk_write_overruns(buffer->overruns);
 
-  disk_write(buffer->data,buffer->pos);
-}
+  disk_write(buffer->data,buffer->pos); }
 
 
 static void cleanup_disk(void){
@@ -1564,6 +1547,7 @@ static int process(jack_nframes_t nframes, void *arg){
 
   }else{
     process_fill_buffers(nframes);
+    num_frames_recorded += nframes;
     if(use_jack_transport==true && state==JackTransportStopped){
       send_buffer_to_disk_thread(current_buffer);
       sem_post(&stop_sem);
