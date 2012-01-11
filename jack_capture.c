@@ -973,6 +973,7 @@ void osc_stop() { sem_post(&stop_sem); }
 #ifdef STORE_SYNC
 static struct timespec rtime;
 static int store_sync = 0;
+static int ssync_offset = 0;
 static jack_nframes_t j_latency = 0;
 #endif
 
@@ -1156,13 +1157,14 @@ static void close_soundfile(void){
     print_message("jack_capture failed with a total of %d disk errors.\n",disk_errors);
 }
 
-static int rotate_file(){
+static int rotate_file(size_t frames){
 #ifdef STORE_SYNC
 	store_sync=0;
-	// XXX - new file actually already contains CURRENT buffer!
-	// TODO subtract 1[?] audio period from upcoming timestamp
-	// or take time NOW; and subtract sample-count in rinbuffer (more jitter)
-	// best: timestamp EACH frame :(
+	// XXX - new file will already contain the CURRENT buffer!
+	// but sync-timeframe will only be saved on the start of next jack cycle.
+	//
+	// -> save current audio ringbuffer-size -> subtract from next sync timestamp.
+	ssync_offset = frames;
 #endif
 
   sf_close(soundfile);
@@ -1195,13 +1197,13 @@ static int handle_filelimit(size_t frames){
 
   if(is_using_wav && (disksize + ((int64_t)new_bytes) >= UINT32_MAX-(1024*1024))){ // (1024*1024) should be enough for the header.
     print_message("Warning. 4GB limit on wav file almost reached.");
-    if (!rotate_file()) return 0;
+    if (!rotate_file(frames)) return 0;
   }
 #ifdef HAVE_LIBLO
   else if (queued_file_rotate) {
     queued_file_rotate=false;
     print_message("Note. file-name rotation request received.");
-    if (!rotate_file()) return 0;
+    if (!rotate_file(frames)) return 0;
   }
 #endif
   disksize+=new_bytes;
@@ -1362,6 +1364,14 @@ static void disk_callback(vringbuffer_t *vrb,bool first_time,void *element){
 
       if (rtime.tv_nsec > lat_nsec) rtime.tv_nsec-=lat_nsec; else {rtime.tv_nsec+=1000000000-lat_nsec; rtime.tv_sec--;}
       rtime.tv_sec-=lat_sec;
+#endif
+#if 1 // subtract (buffer) offset after file-rotate
+      int64_t sync_nsec = (ssync_offset%((int)jack_samplerate))*1000000000;
+      int64_t sync_sec  = ssync_offset/((int)jack_samplerate);
+
+      if (rtime.tv_nsec > sync_nsec) rtime.tv_nsec-=sync_nsec; else {rtime.tv_nsec+=1000000000-sync_nsec; rtime.tv_sec--;}
+      rtime.tv_sec-=sync_sec;
+      ssync_offset = 0;
 #endif
       FILE *file = fopen(string_concat(filename, ".tme"),"w");
       if(file) {
