@@ -959,7 +959,7 @@ static int bytes_per_frame;
 static SNDFILE *soundfile=NULL;
 static int64_t overruns=0;
 
-#if HAVE_LIBLO
+#ifdef HAVE_LIBLO
 bool queued_file_rotate=false;
 void osc_stop() { sem_post(&stop_sem); }
 #endif
