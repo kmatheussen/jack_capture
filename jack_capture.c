@@ -140,6 +140,9 @@ static char *hook_cmd_closed = NULL;
 static char *hook_cmd_rotate = NULL;
 static char *hook_cmd_timing = NULL;
 #endif
+#ifdef AUTOROTATE
+static int64_t rotateframe=0;
+#endif
 
 /* JACK data */
 static jack_port_t **ports;
@@ -1200,6 +1203,11 @@ static int handle_filelimit(size_t frames){
     if (!rotate_file(frames)) return 0;
   }
 #endif
+#ifdef AUTOROTATE
+  else if (rotateframe > 0 && disksize > (rotateframe*bytes_per_frame*num_channels) ) {
+    if (!rotate_file(frames)) return 0;
+	}
+#endif
   disksize+=new_bytes;
   return 1; }
 
@@ -1981,6 +1989,9 @@ static const char *advanced_help =
 # ifdef STORE_SYNC
   "[--hook-timing] or [-Ht]         -> callback when first audio frame is received.\n"
 # endif
+#ifdef AUTOROTATE
+  "[--rotatefile] or [-Rf]          -> force rotate files every N audio-frames.\n"
+#endif
   "\n"
   " All hook options take a path to an executable as argument.\n"
   " The commands are executed in a fire-and-forget style upon internal events.\n"
@@ -2096,6 +2107,9 @@ void init_arguments(int argc, char *argv[]){
 #endif
 #ifdef STORE_SYNC
       OPTARG("--timestamp","-S") create_tme_file=true;
+#endif
+#ifdef AUTOROTATE
+      OPTARG("--rotatefile","-Rf") rotateframe = (int64_t) atol(OPTARG_GETSTRING());
 #endif
       OPTARG_LAST() base_filename=OPTARG_GETSTRING();
     }OPTARGS_END;

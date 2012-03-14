@@ -25,6 +25,8 @@ LINKFLAGS+=`pkg-config --libs liblo`
 COMPILEFLAGS+=-DEXEC_HOOKS
 # TODO: configuration option
 COMPILEFLAGS+=-DSTORE_SYNC
+# TODO: configuration option
+COMPILEFLAGS+=-DAUTOROTATE
 
 # TODO check libjack for jack_port_get_latency_range symbol
 ifeq ($(shell grep jack_port_get_latency_range /usr/lib/libjack.so &>/dev/null && echo yes), yes)
