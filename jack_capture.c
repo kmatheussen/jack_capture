@@ -1360,14 +1360,14 @@ static void disk_callback(vringbuffer_t *vrb,bool first_time,void *element){
       int64_t lat_sec = lat_nsec/1000000000;
       lat_nsec = lat_nsec%1000000000;
 
-      if (rtime.tv_nsec > lat_nsec) rtime.tv_nsec-=lat_nsec; else {rtime.tv_nsec+=1000000000-lat_nsec; rtime.tv_sec--;}
+      if (rtime.tv_nsec >= lat_nsec) rtime.tv_nsec-=lat_nsec; else {rtime.tv_nsec+=(1000000000-lat_nsec); rtime.tv_sec--;}
       rtime.tv_sec-=lat_sec;
 #endif
 #if 1 // subtract (buffer) offset after file-rotate
-      int64_t sync_nsec = (ssync_offset%((int)jack_samplerate))*1000000000;
+      int64_t sync_nsec = (ssync_offset%((int)jack_samplerate))*1000000000/jack_samplerate;
       int64_t sync_sec  = ssync_offset/((int)jack_samplerate);
 
-      if (rtime.tv_nsec > sync_nsec) rtime.tv_nsec-=sync_nsec; else {rtime.tv_nsec+=1000000000-sync_nsec; rtime.tv_sec--;}
+      if (rtime.tv_nsec > sync_nsec) rtime.tv_nsec-=sync_nsec; else {rtime.tv_nsec+=(1000000000-sync_nsec); rtime.tv_sec--;}
       rtime.tv_sec-=sync_sec;
       ssync_offset = 0;
 #endif
