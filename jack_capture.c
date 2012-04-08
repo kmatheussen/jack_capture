@@ -18,7 +18,8 @@
 
 */
 
-#include "das_config.h"
+#include "config.h"
+#define HAVE_LAME HAVE_MP3LAME
 
 #include <signal.h>
 #include <stdio.h>
@@ -1026,7 +1027,7 @@ static int open_mp3file(void){
 
 
 
-#include "setformat.c"
+#include "setformat.h"
 
 
 static int open_soundfile(void){
@@ -2062,7 +2063,7 @@ void init_arguments(int argc, char *argv[]){
         }
         soundfile_format_is_set=true;
       }
-      OPTARG("--version","-v") puts(VERSION);exit(0);
+      OPTARG("--version","-v") puts(PACKAGE_VERSION);exit(0);
       OPTARG("--silent","-s") silent=true;
       OPTARG("--verbose","-V") verbose=true;
       OPTARG("--quiet","-q") { absolutely_quiet=true; use_vu=false; silent=true; show_bufferusage=false; wait_for_keyboard=false;}
