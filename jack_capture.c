@@ -801,6 +801,7 @@ static void stop_helper_thread(void){
 
 #ifdef EXEC_HOOKS
 #include <libgen.h>
+#include <sys/wait.h>
 
 #ifndef __USE_GNU
 /* This code has been derived from an example in the glibc2 documentation.
@@ -861,6 +862,10 @@ int asprintf(char **buffer, char *fmt, ...) {
   free(bntmp); \
 }
 
+static void wait_child(int sig){
+  wait(NULL);
+}
+
 static void call_hook(const char *cmd, int argc, char **argv){
   /* invoke external command */
   if (verbose==true) {
@@ -894,6 +899,8 @@ static void call_hook(const char *cmd, int argc, char **argv){
   if (pid < 0 ) {
     print_message("EXE: error; can not fork child process\n");
   }
+
+  signal(SIGCHLD,wait_child);
 
   /* clean up */
   for (argc=0;argv[argc];++argc) {
