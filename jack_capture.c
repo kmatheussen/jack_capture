@@ -2397,10 +2397,7 @@ void stop_recording_and_cleanup(void){
   
   if(use_manual_connections==false)
     stop_connection_thread();
-  
-  if(jack_has_been_shut_down==false)
-    jack_client_close(client);
-  
+
   vringbuffer_stop_callbacks(vringbuffer); // Called before cleanup_disk to make sure all data are sent to the callback.
   
   cleanup_disk();
@@ -2413,6 +2410,9 @@ void stop_recording_and_cleanup(void){
 #ifdef HAVE_LIBLO
   shutdown_osc();
 #endif
+
+  if(jack_has_been_shut_down==false)
+    jack_client_close(client);
 
   if(silent==false){
     usleep(50); // wait for terminal
