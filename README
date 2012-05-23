@@ -132,6 +132,23 @@ Additional arguments:
                                     recording when needed. But it will never go beyond this size.)
 [--filename] or [-fn]            -> Specify filename.
                                     (It's usually easier to set last argument instead)
+[--osc] or [-O]                  -> Specify OSC port number to liste on.
+[--timestamp] or [-S]            -> create a FILENAME.tme file for each recording, storing
+                                    the system-time corresponding to the first audio sample.
+[--hook-open c] or [-Ho c]       -> command to execute on successful file-open. (see below)
+[--hook-close c] or [-Hc c]      -> command to execute on closing the file. (see below)
+[--hook-rotate c] or [-Hr c]     -> command to execute on file-name-rotation. (see below)
+[--hook-timing c] or [-Ht c]     -> callback when first audio frame is received. (see below)
+[--rotatefile N] or [-Rf N]      -> force rotate files every N audio-frames.
+
+ All hook options take a path to an executable as argument.
+ The commands are executed in a fire-and-forget style upon internal events.
+ Paramaters passed to the hook-scripts:
+  open:   CMD <filename>
+  close:  CMD <filename> <xrun-count> <io-error-count>
+  rotate: CMD <filename> <xrun-count> <io-error-count> <new-filename> <seq-number>
+  timing: CMD <filename> <time-sec> <time-nses> <jack-port-latency in frames>
+
 
 Examples:
 
