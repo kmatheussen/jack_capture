@@ -187,6 +187,16 @@ made by Robin Gareus.
 
 CHANGES
 *******
+0.9.61 -> 0.9.62
+ * Allow to remote-control jack-capture via OSC. (Robin Gareus)
+ * Added exec-hooks: jack_capture can launch an external app in fire&forget mode (from the disk-thread). (Robin Gareus)
+    * When it opens a new file for writing
+    * When it closes a file, recording finished
+    * On file-name-rotation
+    * When first audio frame is received.
+ * Write a timestamp file with sample-accurate system time of the start of recording. (Robin Gareus)
+ * Forced file-name rotatation every N audio-frames. (Robin Gareus)
+
 0.9.60 -> 0.9.61
  * Fix writing to stdout.
  * Don't use helper thread when writing to stdout.
