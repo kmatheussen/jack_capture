@@ -140,6 +140,9 @@ static char *hook_cmd_closed = NULL;
 static char *hook_cmd_rotate = NULL;
 static char *hook_cmd_timing = NULL;
 #endif
+#ifdef AUTOROTATE
+static int64_t rotateframe=0;
+#endif
 
 /* JACK data */
 static jack_port_t **ports;
@@ -798,6 +801,7 @@ static void stop_helper_thread(void){
 
 #ifdef EXEC_HOOKS
 #include <libgen.h>
+#include <sys/wait.h>
 
 #ifndef __USE_GNU
 /* This code has been derived from an example in the glibc2 documentation.
@@ -858,6 +862,10 @@ int asprintf(char **buffer, char *fmt, ...) {
   free(bntmp); \
 }
 
+static void wait_child(int sig){
+  wait(NULL);
+}
+
 static void call_hook(const char *cmd, int argc, char **argv){
   /* invoke external command */
   if (verbose==true) {
@@ -891,6 +899,8 @@ static void call_hook(const char *cmd, int argc, char **argv){
   if (pid < 0 ) {
     print_message("EXE: error; can not fork child process\n");
   }
+
+  signal(SIGCHLD,wait_child);
 
   /* clean up */
   for (argc=0;argv[argc];++argc) {
@@ -959,7 +969,7 @@ static int bytes_per_frame;
 static SNDFILE *soundfile=NULL;
 static int64_t overruns=0;
 
-#if HAVE_LIBLO
+#ifdef HAVE_LIBLO
 bool queued_file_rotate=false;
 void osc_stop() { sem_post(&stop_sem); }
 #endif
@@ -1042,8 +1052,14 @@ static int open_soundfile(void){
 	}
 
 
-  if(filename==NULL)
-    filename=strdup(base_filename);
+  if(filename==NULL){
+    if (rotateframe>0){ // always use .NUM. with rotation
+      filename=my_calloc(1,strlen(base_filename)+500);
+      sprintf(filename,"%s.%0*d.wav",base_filename,3,0); //XXX  file extension ?!
+    }else{
+      filename=strdup(base_filename);
+    }
+  }
 
 #if HAVE_LAME
   if(write_to_mp3==true)
@@ -1165,7 +1181,7 @@ static int rotate_file(size_t frames){
 
   char *filename_new;
   filename_new=my_calloc(1,strlen(base_filename)+500);
-  sprintf(filename_new,"%s.%0*d.wav",base_filename,2,num_files);
+  sprintf(filename_new,"%s.%0*d.wav",base_filename,3,num_files);
   print_message("Closing %s, and continue writing to %s.\n",filename,filename_new);
   num_files++;
 
@@ -1199,6 +1215,11 @@ static int handle_filelimit(size_t frames){
     print_message("Note. file-name rotation request received.");
     if (!rotate_file(frames)) return 0;
   }
+#endif
+#ifdef AUTOROTATE
+  else if (rotateframe > 0 && disksize > (rotateframe*bytes_per_frame*num_channels) ) {
+    if (!rotate_file(frames)) return 0;
+	}
 #endif
   disksize+=new_bytes;
   return 1; }
@@ -1346,14 +1367,14 @@ static void disk_callback(vringbuffer_t *vrb,bool first_time,void *element){
       int64_t lat_sec = lat_nsec/1000000000;
       lat_nsec = lat_nsec%1000000000;
 
-      if (rtime.tv_nsec > lat_nsec) rtime.tv_nsec-=lat_nsec; else {rtime.tv_nsec+=1000000000-lat_nsec; rtime.tv_sec--;}
+      if (rtime.tv_nsec >= lat_nsec) rtime.tv_nsec-=lat_nsec; else {rtime.tv_nsec+=(1000000000-lat_nsec); rtime.tv_sec--;}
       rtime.tv_sec-=lat_sec;
 #endif
 #if 1 // subtract (buffer) offset after file-rotate
-      int64_t sync_nsec = (ssync_offset%((int)jack_samplerate))*1000000000;
+      int64_t sync_nsec = (ssync_offset%((int)jack_samplerate))*1000000000/jack_samplerate;
       int64_t sync_sec  = ssync_offset/((int)jack_samplerate);
 
-      if (rtime.tv_nsec > sync_nsec) rtime.tv_nsec-=sync_nsec; else {rtime.tv_nsec+=1000000000-sync_nsec; rtime.tv_sec--;}
+      if (rtime.tv_nsec > sync_nsec) rtime.tv_nsec-=sync_nsec; else {rtime.tv_nsec+=(1000000000-sync_nsec); rtime.tv_sec--;}
       rtime.tv_sec-=sync_sec;
       ssync_offset = 0;
 #endif
@@ -1981,6 +2002,9 @@ static const char *advanced_help =
 # ifdef STORE_SYNC
   "[--hook-timing] or [-Ht]         -> callback when first audio frame is received.\n"
 # endif
+#ifdef AUTOROTATE
+  "[--rotatefile] or [-Rf]          -> force rotate files every N audio-frames.\n"
+#endif
   "\n"
   " All hook options take a path to an executable as argument.\n"
   " The commands are executed in a fire-and-forget style upon internal events.\n"
@@ -2096,6 +2120,9 @@ void init_arguments(int argc, char *argv[]){
 #endif
 #ifdef STORE_SYNC
       OPTARG("--timestamp","-S") create_tme_file=true;
+#endif
+#ifdef AUTOROTATE
+      OPTARG("--rotatefile","-Rf") rotateframe = (int64_t) atol(OPTARG_GETSTRING());
 #endif
       OPTARG_LAST() base_filename=OPTARG_GETSTRING();
     }OPTARGS_END;
