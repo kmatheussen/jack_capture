@@ -1071,7 +1071,7 @@ static int open_soundfile(void){
   // Code below for sndfile
   /////////////////////////
 
-  sf_info.samplerate = jack_get_sample_rate (client);
+  sf_info.samplerate = jack_samplerate;
   sf_info.channels   = num_channels;
   
   {
