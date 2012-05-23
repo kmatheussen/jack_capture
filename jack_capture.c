@@ -1995,6 +1995,9 @@ static const char *advanced_help =
   "[--timestamp] or [-S]            -> create a FILENAME.tme file for each recording, storing\n"
   "                                    the system-time corresponding to the first audio sample.\n"
 #endif
+#ifdef AUTOROTATE
+  "[--rotatefile N] or [-Rf N]      -> force rotate files every N audio-frames.\n"
+#endif
 #ifdef EXEC_HOOKS
   "[--hook-open c] or [-Ho c]       -> command to execute on successful file-open. (see below)\n"
   "[--hook-close c] or [-Hc c]      -> command to execute on closing the file. (see below)\n"
@@ -2002,9 +2005,6 @@ static const char *advanced_help =
 # ifdef STORE_SYNC
   "[--hook-timing c] or [-Ht c]     -> callback when first audio frame is received. (see below)\n"
 # endif
-#ifdef AUTOROTATE
-  "[--rotatefile N] or [-Rf N]      -> force rotate files every N audio-frames.\n"
-#endif
   "\n"
   " All hook options take a path to an executable as argument.\n"
   " The commands are executed in a fire-and-forget style upon internal events.\n"
