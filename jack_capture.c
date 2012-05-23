@@ -880,6 +880,7 @@ static void call_hook(const char *cmd, int argc, char **argv){
     /* child process */
 
     if(1){ /* redirect all output of child process*/
+      /* one day this if(1) could become a global option */
       int fd;
       if((fd = open("/dev/null", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR))==-1){
 	perror("open");
@@ -2000,14 +2001,15 @@ static const char *advanced_help =
 #endif
 #ifdef EXEC_HOOKS
   "[--hook-open c] or [-Ho c]       -> command to execute on successful file-open. (see below)\n"
-  "[--hook-close c] or [-Hc c]      -> command to execute on closing the file. (see below)\n"
+  "[--hook-close c] or [-Hc c]      -> command to execute when closing the session. (see below)\n"
   "[--hook-rotate c] or [-Hr c]     -> command to execute on file-name-rotation. (see below)\n"
 # ifdef STORE_SYNC
   "[--hook-timing c] or [-Ht c]     -> callback when first audio frame is received. (see below)\n"
 # endif
   "\n"
-  " All hook options take a path to an executable as argument.\n"
+  " All hook options take a full-path to an executable as argument.\n"
   " The commands are executed in a fire-and-forget style upon internal events.\n"
+  " All output of the hooks is discarded.\n"
   " Paramaters passed to the hook-scripts:\n"
   "  open:   CMD <filename>\n"
   "  close:  CMD <filename> <xrun-count> <io-error-count>\n"
