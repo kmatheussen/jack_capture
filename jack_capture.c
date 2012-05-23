@@ -73,6 +73,7 @@ void shutdown_osc(void);
 #define OPTARGS_BEGIN(das_usage) {int lokke;const char *usage=das_usage;for(lokke=0;lokke<argc;lokke++){char *a=argv[lokke];if(!strcmp("--help",a)||!strcmp("-h",a)){fprintf(stderr,"%s",usage);exit(0);
 #define OPTARG(name,name2) }}else if(!strcmp(name,a)||!strcmp(name2,a)){{
 #define OPTARG_GETINT() OPTARGS_CHECK_GET(0,atoi(argv[++lokke]))
+#define OPTARG_GETLONG() OPTARGS_CHECK_GET(0,atol(argv[++lokke]))
 //int optargs_inttemp;
 //#define OPTARG_GETINT() OPTARGS_CHECK_GET(0,(optargs_inttemp=strtol(argv[++lokke],(char**)NULL,10),errno!=0?(perror("strtol"),0):optargs_inttemp))
 #define OPTARG_GETFLOAT() OPTARGS_CHECK_GET(0.0f,atof(argv[++lokke]))
@@ -2122,7 +2123,7 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--timestamp","-S") create_tme_file=true;
 #endif
 #ifdef AUTOROTATE
-      OPTARG("--rotatefile","-Rf") rotateframe = OPTARG_GETINT();
+      OPTARG("--rotatefile","-Rf") rotateframe = OPTARG_GETLONG();
 #endif
       OPTARG_LAST() base_filename=OPTARG_GETSTRING();
     }OPTARGS_END;
