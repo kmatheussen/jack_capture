@@ -47,6 +47,9 @@
 
 #include <jack/jack.h>
 
+#include <libgen.h>
+#include <sys/wait.h>
+
 #if HAVE_LAME
 #include <lame/lame.h>
 #endif
@@ -134,12 +137,10 @@ static bool use_manual_connections = false;
 #ifdef HAVE_LIBLO
 static int osc_port = -1;
 #endif
-#ifdef EXEC_HOOKS
 static char *hook_cmd_opened = NULL;
 static char *hook_cmd_closed = NULL;
 static char *hook_cmd_rotate = NULL;
 static char *hook_cmd_timing = NULL;
-#endif
 #ifdef AUTOROTATE
 static int64_t rotateframe=0;
 #endif
@@ -799,9 +800,6 @@ static void stop_helper_thread(void){
 //////////////////////// DISK Thread hooks //////////////////////////
 /////////////////////////////////////////////////////////////////////
 
-#ifdef EXEC_HOOKS
-#include <libgen.h>
-#include <sys/wait.h>
 
 #ifndef __USE_GNU
 /* This code has been derived from an example in the glibc2 documentation.
@@ -954,7 +952,6 @@ static void hook_file_rotated(char *oldfn, char *newfn, int num, int xruns, int 
   ARGS_ADD_ARGV("%d", num);
   call_hook(cmd, argc, argv);
 }
-#endif
 
 
 /////////////////////////////////////////////////////////////////////
@@ -1028,9 +1025,7 @@ static int open_mp3file(void){
     return 0;
   }
 
-#ifdef EXEC_HOOKS
 	hook_file_opened(filename);
-#endif
   return 1;
 }
 #endif
@@ -1046,9 +1041,7 @@ static int open_soundfile(void){
   SF_INFO sf_info; memset(&sf_info,0,sizeof(sf_info));
 
   if(write_to_stdout==true) {
-#ifdef EXEC_HOOKS
 	hook_file_opened("file:///stdout");
-#endif
     return 1;
 	}
 
@@ -1135,9 +1128,7 @@ static int open_soundfile(void){
     return 0;
   }
 
-#ifdef EXEC_HOOKS
   hook_file_opened(filename);
-#endif
 
   return 1;
 }
@@ -1156,9 +1147,7 @@ static void close_soundfile(void){
 #endif
   }
 
-#ifdef EXEC_HOOKS
   hook_file_closed(filename, total_overruns, disk_errors);
-#endif
 
   if (overruns > 0) {
     print_message("jack_capture failed with a total of %d overruns.\n", total_overruns);
@@ -1186,9 +1175,7 @@ static int rotate_file(size_t frames){
   print_message("Closing %s, and continue writing to %s.\n",filename,filename_new);
   num_files++;
 
-#ifdef EXEC_HOOKS
   hook_file_rotated(filename, filename_new, num_files, total_overruns, disk_errors);
-#endif
 
   free(filename);
   filename=filename_new;
@@ -1358,9 +1345,7 @@ static void disk_callback(vringbuffer_t *vrb,bool first_time,void *element){
 #ifdef STORE_SYNC
   if (store_sync==1) {
     store_sync=2;
-#ifdef EXEC_HOOKS
     hook_rec_timimg(filename, rtime, j_latency);
-#endif
 
     if (create_tme_file) { // write .tme info-file
 #if 1 //subtract port latency.
@@ -1999,7 +1984,6 @@ static const char *advanced_help =
 #ifdef AUTOROTATE
   "[--rotatefile N] or [-Rf N]      -> force rotate files every N audio-frames.\n"
 #endif
-#ifdef EXEC_HOOKS
   "[--hook-open c] or [-Ho c]       -> command to execute on successful file-open. (see below)\n"
   "[--hook-close c] or [-Hc c]      -> command to execute when closing the session. (see below)\n"
   "[--hook-rotate c] or [-Hr c]     -> command to execute on file-name-rotation. (see below)\n"
@@ -2015,7 +1999,6 @@ static const char *advanced_help =
   "  close:  CMD <filename> <xrun-count> <io-error-count>\n"
   "  rotate: CMD <filename> <xrun-count> <io-error-count> <new-filename> <seq-number>\n"
   "  timing: CMD <filename> <time-sec> <time-nses> <jack-port-latency in frames>\n"
-#endif
   "\n"
   "Examples:\n"
   "\n"
@@ -2112,13 +2095,11 @@ void init_arguments(int argc, char *argv[]){
 #ifdef HAVE_LIBLO
       OPTARG("--osc","-O") osc_port=atoi(OPTARG_GETSTRING());
 #endif
-#ifdef EXEC_HOOKS
       OPTARG("--hook-open","-Ho")   hook_cmd_opened = OPTARG_GETSTRING();
       OPTARG("--hook-close","-Hc")  hook_cmd_closed = OPTARG_GETSTRING();
       OPTARG("--hook-rotate","-Hr") hook_cmd_rotate = OPTARG_GETSTRING();
-# ifdef STORE_SYNC
+#ifdef STORE_SYNC
       OPTARG("--hook-timing","-Ht") hook_cmd_timing = OPTARG_GETSTRING();
-# endif
 #endif
 #ifdef STORE_SYNC
       OPTARG("--timestamp","-S") create_tme_file=true;
