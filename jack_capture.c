@@ -139,9 +139,7 @@ static char *hook_cmd_opened = NULL;
 static char *hook_cmd_closed = NULL;
 static char *hook_cmd_rotate = NULL;
 static char *hook_cmd_timing = NULL;
-#ifdef AUTOROTATE
 static int64_t rotateframe=0;
-#endif
 
 /* JACK data */
 static jack_port_t **ports;
@@ -1198,11 +1196,9 @@ static int handle_filelimit(size_t frames){
     if (!rotate_file(frames)) return 0;
   }
 #endif
-#ifdef AUTOROTATE
   else if (rotateframe > 0 && disksize > (rotateframe*bytes_per_frame*num_channels) ) {
     if (!rotate_file(frames)) return 0;
 	}
-#endif
   disksize+=new_bytes;
   return 1; }
 
@@ -1970,9 +1966,7 @@ static const char *advanced_help =
 #endif
   "[--timestamp] or [-S]            -> create a FILENAME.tme file for each recording, storing\n"
   "                                    the system-time corresponding to the first audio sample.\n"
-#ifdef AUTOROTATE
   "[--rotatefile N] or [-Rf N]      -> force rotate files every N audio-frames.\n"
-#endif
   "[--hook-open c] or [-Ho c]       -> command to execute on successful file-open. (see below)\n"
   "[--hook-close c] or [-Hc c]      -> command to execute when closing the session. (see below)\n"
   "[--hook-rotate c] or [-Hr c]     -> command to execute on file-name-rotation. (see below)\n"
@@ -2087,9 +2081,7 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--hook-rotate","-Hr") hook_cmd_rotate = OPTARG_GETSTRING();
       OPTARG("--hook-timing","-Ht") hook_cmd_timing = OPTARG_GETSTRING();
       OPTARG("--timestamp","-S") create_tme_file=true;
-#ifdef AUTOROTATE
       OPTARG("--rotatefile","-Rf") rotateframe = OPTARG_GETINT();
-#endif
       OPTARG_LAST() base_filename=OPTARG_GETSTRING();
     }OPTARGS_END;
 

@@ -21,9 +21,6 @@ targets = jack_capture
 COMPILEFLAGS+=-DHAVE_LIBLO `pkg-config --cflags liblo`
 LINKFLAGS+=`pkg-config --libs liblo`
 
-# TODO: configuration option
-COMPILEFLAGS+=-DAUTOROTATE
-
 # TODO check libjack for jack_port_get_latency_range symbol
 ifeq ($(shell grep jack_port_get_latency_range /usr/lib/libjack.so &>/dev/null && echo yes), yes)
   COMPILEFLAGS+="-DNEW_JACK_LATENCY_API"
