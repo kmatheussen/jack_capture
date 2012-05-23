@@ -22,8 +22,6 @@ COMPILEFLAGS+=-DHAVE_LIBLO `pkg-config --cflags liblo`
 LINKFLAGS+=`pkg-config --libs liblo`
 
 # TODO: configuration option
-COMPILEFLAGS+=-DSTORE_SYNC
-# TODO: configuration option
 COMPILEFLAGS+=-DAUTOROTATE
 
 # TODO check libjack for jack_port_get_latency_range symbol
