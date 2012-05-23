@@ -1996,14 +1996,14 @@ static const char *advanced_help =
   "                                    the system-time corresponding to the first audio sample.\n"
 #endif
 #ifdef EXEC_HOOKS
-  "[--hook-open] or [-Ho]           -> command to execute on successful file-open.\n"
-  "[--hook-close] or [-Hc]          -> command to execute on closing the file.\n"
-  "[--hook-rotate] or [-Hr]         -> command to execute on file-name-rotation.\n"
+  "[--hook-open c] or [-Ho c]       -> command to execute on successful file-open. (see below)\n"
+  "[--hook-close c] or [-Hc c]      -> command to execute on closing the file. (see below)\n"
+  "[--hook-rotate c] or [-Hr c]     -> command to execute on file-name-rotation. (see below)\n"
 # ifdef STORE_SYNC
-  "[--hook-timing] or [-Ht]         -> callback when first audio frame is received.\n"
+  "[--hook-timing c] or [-Ht c]     -> callback when first audio frame is received. (see below)\n"
 # endif
 #ifdef AUTOROTATE
-  "[--rotatefile] or [-Rf]          -> force rotate files every N audio-frames.\n"
+  "[--rotatefile N] or [-Rf N]      -> force rotate files every N audio-frames.\n"
 #endif
   "\n"
   " All hook options take a path to an executable as argument.\n"
@@ -2122,7 +2122,7 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--timestamp","-S") create_tme_file=true;
 #endif
 #ifdef AUTOROTATE
-      OPTARG("--rotatefile","-Rf") rotateframe = (int64_t) atol(OPTARG_GETSTRING());
+      OPTARG("--rotatefile","-Rf") rotateframe = OPTARG_GETINT();
 #endif
       OPTARG_LAST() base_filename=OPTARG_GETSTRING();
     }OPTARGS_END;
