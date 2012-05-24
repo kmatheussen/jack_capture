@@ -132,7 +132,7 @@ static int das_lame_quality = 2; // 0 best, 9 worst.
 static int das_lame_bitrate = -1;
 static bool use_jack_transport = false;
 static bool use_manual_connections = false;
-#ifdef HAVE_LIBLO
+#if HAVE_LIBLO
 static int osc_port = -1;
 #endif
 static char *hook_cmd_opened = NULL;
@@ -963,7 +963,7 @@ static int bytes_per_frame;
 static SNDFILE *soundfile=NULL;
 static int64_t overruns=0;
 
-#ifdef HAVE_LIBLO
+#if HAVE_LIBLO
 bool queued_file_rotate=false;
 void osc_stop() { sem_post(&stop_sem); }
 #endif
@@ -1189,7 +1189,7 @@ static int handle_filelimit(size_t frames){
     print_message("Warning. 4GB limit on wav file almost reached.");
     if (!rotate_file(frames)) return 0;
   }
-#ifdef HAVE_LIBLO
+#if HAVE_LIBLO
   else if (queued_file_rotate) {
     queued_file_rotate=false;
     print_message("Note. file-name rotation request received.");
@@ -1806,7 +1806,7 @@ static void freewheelcallback(int starting, void *arg){
   freewheel_mode = starting;
 }
 
-#ifdef NEW_JACK_LATENCY_API
+#if NEW_JACK_LATENCY_API
 static void jack_latency_cb(jack_latency_callback_mode_t mode, void *arg) {
 	int ch;
 	jack_latency_range_t jlty;
@@ -1961,7 +1961,7 @@ static const char *advanced_help =
   "                                    recording when needed. But it will never go beyond this size.)\n"
   "[--filename] or [-fn]            -> Specify filename.\n"
   "                                    (It's usually easier to set last argument instead)\n"
-#ifdef HAVE_LIBLO
+#if HAVE_LIBLO
   "[--osc] or [-O]                  -> Specify OSC port number to liste on.\n"
 #endif
   "[--timestamp] or [-S]            -> create a FILENAME.tme file for each recording, storing\n"
@@ -2073,9 +2073,13 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--jack-transport","-jt") use_jack_transport=true;
       OPTARG("--manual-connections","-mc") use_manual_connections=true;
       OPTARG("--filename","-fn") base_filename=OPTARG_GETSTRING();
-#ifdef HAVE_LIBLO
-      OPTARG("--osc","-O") osc_port=atoi(OPTARG_GETSTRING());
+      OPTARG("--osc","-O") {
+#if HAVE_LIBLO
+        osc_port=atoi(OPTARG_GETSTRING());
+#else
+        fprintf(stderr,"osc not supported. liblo was not installed when compiling jack_capture\n");
 #endif
+      }
       OPTARG("--hook-open","-Ho")   hook_cmd_opened = OPTARG_GETSTRING();
       OPTARG("--hook-close","-Hc")  hook_cmd_closed = OPTARG_GETSTRING();
       OPTARG("--hook-rotate","-Hr") hook_cmd_rotate = OPTARG_GETSTRING();
@@ -2264,7 +2268,7 @@ void init_various(void){
 
     jack_on_shutdown(client, jack_shutdown, NULL);
 
-#ifdef NEW_JACK_LATENCY_API
+#if NEW_JACK_LATENCY_API
     jack_set_latency_callback (client, jack_latency_cb, NULL);
 #endif
 
@@ -2365,7 +2369,7 @@ void stop_recording_and_cleanup(void){
   
   stop_helper_thread();
 
-#ifdef HAVE_LIBLO
+#if HAVE_LIBLO
   shutdown_osc();
 #endif
 
@@ -2424,7 +2428,7 @@ int main (int argc, char *argv[]){
 
   init_arguments(c_argc+argc,c_argv);
 
-#ifdef HAVE_LIBLO
+#if HAVE_LIBLO
   if (init_osc(osc_port)) {
     /* no OSC available */
     osc_port=-1;

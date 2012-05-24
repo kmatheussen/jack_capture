@@ -16,18 +16,6 @@ LINKFLAGS=-ljack -lsndfile -lm -lpthread
 
 targets = jack_capture
 
-# TODO: configure target after check_dependencies:
-# #pkg-config --exists liblo
-COMPILEFLAGS+=-DHAVE_LIBLO `pkg-config --cflags liblo`
-LINKFLAGS+=`pkg-config --libs liblo`
-
-# TODO check libjack for jack_port_get_latency_range symbol
-ifeq ($(shell grep jack_port_get_latency_range /usr/lib/libjack.so &>/dev/null && echo yes), yes)
-  COMPILEFLAGS+="-DNEW_JACK_LATENCY_API"
-endif
-
-AC_SEARCH_LIBS(jack_port_get_latency_range, jack, AC_DEFINE(NEW_JACK_LATENCY_API) NEW_JACK_LATENCY_API=1 )
-
 all: check_dependencies jack_capture
 
 install: $(targets)

@@ -12,7 +12,6 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-
 echo "#include <sndfile.h>" >temp$$.c
 echo "main(){return SF_FORMAT_OGG;}" >>temp$$.c
 echo >>temp$$.c
@@ -31,6 +30,27 @@ if gcc temp$$.c -lmp3lame 2>/dev/null; then
     echo "//COMPILEFLAGS -lmp3lame"
 else
     echo "#define HAVE_LAME 0"
+fi
+
+
+echo "#include <lo/lo.h>" >temp$$.c
+echo "main(){return 0;}" >>temp$$.c
+echo >>temp$$.c
+if gcc temp$$.c `pkg-config --cflags --libs liblo` ; then
+    echo "#define HAVE_LIBLO 1"
+    echo "//COMPILEFLAGS " `pkg-config --cflags --libs liblo`
+else
+    echo "#define HAVE_LIBLO 0"
+fi
+
+
+echo "#include <jack/jack.h>" >temp$$.c
+echo "main(){return (int)jack_port_get_latency_range;}" >>temp$$.c
+echo >>temp$$.c
+if gcc temp$$.c -ljack ; then
+    echo "#define NEW_JACK_LATENCY_API 1"
+else
+    echo "#define NEW_JACK_LATENCY_API 0"
 fi
 
 
