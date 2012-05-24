@@ -2078,6 +2078,7 @@ void init_arguments(int argc, char *argv[]){
         osc_port=atoi(OPTARG_GETSTRING());
 #else
         fprintf(stderr,"osc not supported. liblo was not installed when compiling jack_capture\n");
+        exit(3);
 #endif
       }
       OPTARG("--hook-open","-Ho")   hook_cmd_opened = OPTARG_GETSTRING();
