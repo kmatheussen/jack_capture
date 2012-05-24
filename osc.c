@@ -22,7 +22,7 @@
 
 #include "das_config.h"
 
-#ifdef HAVE_LIBLO
+#if HAVE_LIBLO
 
 #include <stdio.h>
 #include <stdlib.h>
