@@ -1961,9 +1961,7 @@ static const char *advanced_help =
   "                                    recording when needed. But it will never go beyond this size.)\n"
   "[--filename] or [-fn]            -> Specify filename.\n"
   "                                    (It's usually easier to set last argument instead)\n"
-#if HAVE_LIBLO
   "[--osc] or [-O]                  -> Specify OSC port number to listen on. see --help-osc\n"
-#endif
   "[--timestamp] or [-S]            -> create a FILENAME.tme file for each recording, storing\n"
   "                                    the system-time corresponding to the first audio sample.\n"
   "[--rotatefile N] or [-Rf N]      -> force rotate files every N audio-frames.\n"
@@ -2054,12 +2052,7 @@ void init_arguments(int argc, char *argv[]){
                 )
     {
       OPTARG("--advanced-options","--help2") printf("%s",advanced_help);exit(0);
-#if HAVE_LIBLO
       OPTARG("--help-osc","--help3") printf("%s",osc_help);exit(0);
-#else
-        fprintf(stderr,"osc not supported. liblo was not installed when compiling jack_capture\n");
-        exit(3);
-#endif
       OPTARG("--bitdepth","-b") bitdepth = OPTARG_GETINT();
       OPTARG("--bufsize","-B") min_buffer_time = OPTARG_GETFLOAT(); min_buffer_time=JC_MAX(0.01,min_buffer_time);
       OPTARG("--maxbufsize","-MB") max_buffer_time = OPTARG_GETFLOAT();
