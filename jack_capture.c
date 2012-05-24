@@ -1043,7 +1043,7 @@ static int open_soundfile(void){
   if(filename==NULL){
     if (rotateframe>0){ // always use .NUM. with rotation
       filename=my_calloc(1,strlen(base_filename)+500);
-      sprintf(filename,"%s.%0*d.wav",base_filename,3,0); //XXX  file extension ?!
+      sprintf(filename,"%s.%0*d.wav",base_filename,leading_zeros+1,0);
     }else{
       filename=strdup(base_filename);
     }
@@ -1163,7 +1163,7 @@ static int rotate_file(size_t frames){
 
   char *filename_new;
   filename_new=my_calloc(1,strlen(base_filename)+500);
-  sprintf(filename_new,"%s.%0*d.wav",base_filename,3,num_files);
+  sprintf(filename_new,"%s.%0*d.wav",base_filename,leading_zeros+1,num_files);
   print_message("Closing %s, and continue writing to %s.\n",filename,filename_new);
   num_files++;
 
