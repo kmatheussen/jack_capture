@@ -2020,7 +2020,7 @@ static const char *advanced_help =
 #if HAVE_LIBLO
 static const char *osc_help = 
   "If called with -O <udp-port-number>, jack-capture can be remote-controlled.\n"
-	"The the following OSC (Open Sound Control) messages are understood:\n"
+	"The following OSC (Open Sound Control) messages are understood:\n"
   "\n"
   "  /jack_capture/stop        (no arguments) -- stop recording and exit\n"
   "  /jack_capture/rotate      (no arguments) -- rotate file-name\n"
