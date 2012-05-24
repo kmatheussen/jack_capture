@@ -1962,7 +1962,7 @@ static const char *advanced_help =
   "[--filename] or [-fn]            -> Specify filename.\n"
   "                                    (It's usually easier to set last argument instead)\n"
 #if HAVE_LIBLO
-  "[--osc] or [-O]                  -> Specify OSC port number to liste on.\n"
+  "[--osc] or [-O]                  -> Specify OSC port number to listen on. see --help-osc\n"
 #endif
   "[--timestamp] or [-S]            -> create a FILENAME.tme file for each recording, storing\n"
   "                                    the system-time corresponding to the first audio sample.\n"
@@ -2017,6 +2017,29 @@ static const char *advanced_help =
   "  $jack_capture -c 2 -p system:capture*\n"
   "\n";
 
+#if HAVE_LIBLO
+static const char *osc_help = 
+  "If called with -O <udp-port-number>, jack-capture can be remote-controlled.\n"
+	"The the following OSC (Open Sound Control) messages are understood:\n"
+  "\n"
+  "  /jack_capture/stop        (no arguments) -- stop recording and exit\n"
+  "  /jack_capture/rotate      (no arguments) -- rotate file-name\n"
+  "\n"
+  "Example:\n"
+  "  jack_capture -O 7777\n"
+	"  oscsend localhost 7777 /jack_capture/stop\n"
+  "The 'oscsend' utility comes with liblo, deb-pkg: liblo-utils.\n"
+  "\n"
+  "Caveat:\n"
+	"When used with hook-commands (-Hr, -Hc, etc) the OSC port will be in use\n"
+	"until the last of the hook-commands has terminated.\n"
+	"Launching a new instance of jack_capture with the same OSC port while some\n"
+	"hook-script of a previous instance is still running, will prevent jack_capture\n"
+	"from listening on that UDP-port (non fatal - \"port is in use\" warning).\n"
+	"jack_capture will work fine, but can not be remote-controlled.\n"
+  "\n";
+#endif
+
 void init_arguments(int argc, char *argv[]){
 
   OPTARGS_BEGIN("\n"
@@ -2031,6 +2054,12 @@ void init_arguments(int argc, char *argv[]){
                 )
     {
       OPTARG("--advanced-options","--help2") printf("%s",advanced_help);exit(0);
+#if HAVE_LIBLO
+      OPTARG("--help-osc","--help3") printf("%s",osc_help);exit(0);
+#else
+        fprintf(stderr,"osc not supported. liblo was not installed when compiling jack_capture\n");
+        exit(3);
+#endif
       OPTARG("--bitdepth","-b") bitdepth = OPTARG_GETINT();
       OPTARG("--bufsize","-B") min_buffer_time = OPTARG_GETFLOAT(); min_buffer_time=JC_MAX(0.01,min_buffer_time);
       OPTARG("--maxbufsize","-MB") max_buffer_time = OPTARG_GETFLOAT();
