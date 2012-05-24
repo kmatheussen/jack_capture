@@ -30,6 +30,7 @@ check_dependencies:
 	@echo "Checking dependencies: "
 	which bash
 	which tr
+	which sed
 	which install
 	which pkg-config
 	which $(CC)
@@ -59,7 +60,7 @@ jack_capture_gui2: jack_capture_gui2.cpp
 	$(CPP) $(OPTIMIZE) jack_capture_gui2.cpp `pkg-config --libs --cflags gtk+-2.0` -o jack_capture_gui2
 
 config_flags: Makefile das_config.h
-	cat das_config.h |grep COMPILEFLAGS|sed s/\\/\\/COMPILEFLAGS// >config_flags
+	cat das_config.h |grep COMPILEFLAGS|sed s/\\/\\/COMPILEFLAGS//|tr '\n' ' ' >config_flags
 
 das_config.h: gen_das_config_h.sh
 	bash gen_das_config_h.sh >das_config.h
