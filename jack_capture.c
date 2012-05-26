@@ -131,6 +131,7 @@ static bool write_to_mp3 = false;
 static int das_lame_quality = 2; // 0 best, 9 worst.
 static int das_lame_bitrate = -1;
 static bool use_jack_transport = false;
+static bool use_jack_freewheel = false;
 static bool use_manual_connections = false;
 #if HAVE_LIBLO
 static int osc_port = -1;
@@ -326,6 +327,10 @@ static float buffers_to_seconds(int buffers){
 
 
 static int autoincrease_callback(vringbuffer_t *vrb, bool first_call, int reading_size, int writing_size){
+  if(use_jack_freewheel){
+    return 0;
+  }
+
   if(first_call){
     set_high_priority();
     return 0; }
@@ -1330,6 +1335,10 @@ static void disk_callback(vringbuffer_t *vrb,bool first_time,void *element){
     print_message("Received JackTranportRolling. Recording.\n");
     printed_receive_message=true; }
 
+  if(use_jack_freewheel==true && printed_receive_message==false){
+    print_message("Entered Jack Freewheeling. Recording.\n");
+    printed_receive_message=true; }
+
   disk_thread_control_priority();
 
   if (store_sync==1) {
@@ -1478,6 +1487,7 @@ static void process_fill_buffers(int jack_block_size){
 }
 
 static bool jack_transport_started=false;
+static bool jack_freewheel_started=false;
 
 enum{
   NOT_STARTED,
@@ -1498,6 +1508,13 @@ static int process(jack_nframes_t nframes, void *arg){
     }
 
     if(jack_transport_started==false)
+      return 0;
+  }
+  if (use_jack_freewheel==true) {
+    if (freewheel_mode > 0)
+      jack_freewheel_started=true;
+
+    if(jack_freewheel_started==false)
       return 0;
   }
 
@@ -1542,10 +1559,20 @@ static int process(jack_nframes_t nframes, void *arg){
   }else{
     process_fill_buffers(nframes);
     num_frames_recorded += nframes;
-    if(use_jack_transport==true && state==JackTransportStopped){
+    if(    (use_jack_transport==true && state==JackTransportStopped)
+	|| (use_jack_freewheel==true && freewheel_mode==0)
+      ){
       send_buffer_to_disk_thread(current_buffer);
       sem_post(&stop_sem);
       process_state=RECORDING_FINISHED;
+    }
+  }
+
+  if (use_jack_freewheel==true) {
+    /* wait for buffer to flush to disk */
+    while(vringbuffer_reading_size(vringbuffer) > 0){
+      sched_yield();
+      usleep(1000);
     }
   }
 
@@ -1953,6 +1980,8 @@ static const char *advanced_help =
   "[--jack-transport-multi]/[-jtm]  -> Similar to --jack-transport, but do not end program when jack transport stops.\n"
   "                                    Instead, record to a new file when jack_transport starts rolling again.\n"
   "                                    (not implemented yet)\n"
+  "[--jack-freewheeling]/[-jf]      -> Start program, but do not start recording until jack enters freewheeling mode\n"
+  "                                    When jack leaves freewheeling, the recording is also stopped, and the program ends.\n"
   "[--manual-connections]/[-mc]     -> jack_capture will not connect any ports for you. \n"
   "[--bufsize s] or [-B s]          -> Initial/minimum buffer size in seconds. Default is 8 seconds\n"
   "                                    for mp3 files, and 4 seconds for all other formats.\n" 
@@ -2093,6 +2122,7 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--meterbridge-type","-mt") use_meterbridge=true;meterbridge_type=OPTARG_GETSTRING();
       OPTARG("--meterbridge-reference","-mr") use_meterbridge=true;meterbridge_reference=OPTARG_GETSTRING();
       OPTARG("--jack-transport","-jt") use_jack_transport=true;
+      OPTARG("--jack-freewheel","-jf") use_jack_freewheel=true;
       OPTARG("--manual-connections","-mc") use_manual_connections=true;
       OPTARG("--filename","-fn") base_filename=OPTARG_GETSTRING();
       OPTARG("--osc","-O") {
@@ -2112,6 +2142,10 @@ void init_arguments(int argc, char *argv[]){
       OPTARG_LAST() base_filename=OPTARG_GETSTRING();
     }OPTARGS_END;
 
+  if(use_jack_freewheel==true && use_jack_transport==true){
+    fprintf(stderr,"--jack-transport and --jack-freewheel are mutually exclusive options.\n");
+    exit(2);
+	}
 
   if(write_to_mp3==true){
 #if HAVE_LAME
@@ -2359,6 +2393,8 @@ void wait_until_recording_finished(void){
 
   if(use_jack_transport==true)
     print_message("Waiting for JackTransportRolling.\n");
+  if(use_jack_freewheel==true)
+    print_message("Waiting for Jack Freewheeling .\n");
   
   sem_wait(&stop_sem);
   turn_on_echo();
