@@ -327,13 +327,13 @@ static float buffers_to_seconds(int buffers){
 
 
 static int autoincrease_callback(vringbuffer_t *vrb, bool first_call, int reading_size, int writing_size){
-  if(first_call){
-    set_high_priority();
-    return 0; }
-
   if(use_jack_freewheel){
     return 0;
   }
+
+  if(first_call){
+    set_high_priority();
+    return 0; }
 
 #if 0
   if(1){
@@ -1511,7 +1511,7 @@ static int process(jack_nframes_t nframes, void *arg){
       return 0;
   }
   if (use_jack_freewheel==true) {
-    if (freewheel_mode)
+    if (freewheel_mode > 0)
       jack_freewheel_started=true;
 
     if(jack_freewheel_started==false)
@@ -1560,8 +1560,8 @@ static int process(jack_nframes_t nframes, void *arg){
     process_fill_buffers(nframes);
     num_frames_recorded += nframes;
     if(    (use_jack_transport==true && state==JackTransportStopped)
-	|| (use_jack_freewheel==true && !freewheel_mode)
-			){
+	|| (use_jack_freewheel==true && freewheel_mode==0)
+      ){
       send_buffer_to_disk_thread(current_buffer);
       sem_post(&stop_sem);
       process_state=RECORDING_FINISHED;
@@ -1570,7 +1570,10 @@ static int process(jack_nframes_t nframes, void *arg){
 
   if (use_jack_freewheel==true) {
     /* wait for buffer to flush to disk */
-    while(vringbuffer_reading_size(vringbuffer) > 0){ usleep(1); }
+    while(vringbuffer_reading_size(vringbuffer) > 0){
+      sched_yield();
+      usleep(1000);
+    }
   }
 
 
@@ -2140,7 +2143,7 @@ void init_arguments(int argc, char *argv[]){
     }OPTARGS_END;
 
   if(use_jack_freewheel==true && use_jack_transport==true){
-    fprintf(stderr,"--jack-transport and --jack-freewheel are exclusive options.\n");
+    fprintf(stderr,"--jack-transport and --jack-freewheel are mutually exclusive options.\n");
     exit(2);
 	}
 
