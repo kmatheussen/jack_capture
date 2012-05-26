@@ -327,9 +327,8 @@ static float buffers_to_seconds(int buffers){
 
 
 static int autoincrease_callback(vringbuffer_t *vrb, bool first_call, int reading_size, int writing_size){
-  if(use_jack_freewheel){
+  if(use_jack_freewheel)
     return 0;
-  }
 
   if(first_call){
     set_high_priority();
@@ -1312,6 +1311,7 @@ static void disk_thread_control_priority(void){
   if(1
      && disk_thread_has_high_priority==false
      && vringbuffer_reading_size(vringbuffer) >= vringbuffer_writing_size(vringbuffer)
+     && use_jack_freewheel==false
      )
     {
       if(set_high_priority()==true){
@@ -1448,6 +1448,11 @@ static void process_fill_buffer(sample_t *in[],buffer_t *buffer,int i,int end){
 }
 
 static bool process_new_current_buffer(int frames_left){
+  if (use_jack_freewheel==true) {
+    while (vringbuffer_writing_size(vringbuffer)==0)
+      msleep(2);
+  }
+
   current_buffer=(buffer_t*)vringbuffer_get_writing(vringbuffer);
   if(current_buffer==NULL){
     total_overruns++;
@@ -1567,15 +1572,6 @@ static int process(jack_nframes_t nframes, void *arg){
       process_state=RECORDING_FINISHED;
     }
   }
-
-  if (use_jack_freewheel==true) {
-    /* wait for buffer to flush to disk */
-    while(vringbuffer_reading_size(vringbuffer) > 0){
-      sched_yield();
-      usleep(1000);
-    }
-  }
-
 
   vringbuffer_trigger_autoincrease_callback(vringbuffer);
 
@@ -1831,6 +1827,12 @@ static int graphordercallback(void *arg){
 
 static void freewheelcallback(int starting, void *arg){
   freewheel_mode = starting;
+
+  if (use_jack_freewheel==true && starting==0) {
+    /* wait for buffer to flush to disk */
+    while(vringbuffer_reading_size(vringbuffer) > 0)
+      msleep(2);
+  }
 }
 
 #if NEW_JACK_LATENCY_API
