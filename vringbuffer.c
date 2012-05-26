@@ -118,11 +118,14 @@ static void* my_malloc(size_t size1,size_t size2){
   return ret;
 }
 
-static void sem_post_if_waiting(sem_t *sem){
+static bool sem_post_if_waiting(sem_t *sem){
   int semval;
   sem_getvalue(sem,&semval);
-  if(semval<=0)
+  if(semval<=0) {
     sem_post(sem);
+    return true;
+  } else
+    return false;
 }
 
 
@@ -305,7 +308,8 @@ static void *receiver_func(void* arg){
       void *buffer=vringbuffer_get_reading(vrb);
       vrb->receiver_callback(vrb,false,buffer);
       vringbuffer_return_reading(vrb,buffer);
-    }    
+    }
+    // This is the <stuck> position. (see below)
   }
 
   return NULL;
@@ -334,7 +338,9 @@ void*	vringbuffer_get_writing		(vringbuffer_t *vrb){
 void vringbuffer_return_writing	(vringbuffer_t *vrb, void *data){
   jack_ringbuffer_write(vrb->for_reader,(char*)&data,sizeof(void*));
   if(vrb->receiver_callback!=NULL)
-    sem_post_if_waiting(&vrb->receiver_trigger);
+    if (sem_post_if_waiting(&vrb->receiver_trigger) == false)
+      if (vringbuffer_reading_size(vrb)==1) // Fix for race condition. Callback might not be triggered if receiver_thread are stuck at the <stuck> position.
+        sem_post(&vrb->receiver_trigger);
 }
 
 int vringbuffer_writing_size	(vringbuffer_t *vrb){
