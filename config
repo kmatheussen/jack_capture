@@ -22,6 +22,7 @@
 # print-formats
 # version
 # silent
+# quiet
 # verbose
 # mp3
 # mp3-quality = n

@@ -1959,6 +1959,7 @@ static const char *advanced_help =
   "                                    exits.\n"
   "[--version] or [-v]              -> Prints out version.\n"
   "[--silent] or [-s]               -> Suppresses some common messages printed to the terminal.\n"
+  "[--quiet] or [-q ]               -> Absolutely quiet.\n"
   "[--verbose] or [-V]              -> Prints some extra information to the terminal.\n"
   "[--mp3] or [-mp3]                -> Writes to an mp3 file using liblame (LAME).\n"
   "                                    (the --format option has no effect using this option)\n"
@@ -2107,8 +2108,8 @@ void init_arguments(int argc, char *argv[]){
       }
       OPTARG("--version","-v") puts(VERSION);exit(0);
       OPTARG("--silent","-s") silent=true;
-      OPTARG("--verbose","-V") verbose=true;
       OPTARG("--quiet","-q") { absolutely_quiet=true; use_vu=false; silent=true; show_bufferusage=false; wait_for_keyboard=false;}
+      OPTARG("--verbose","-V") verbose=true;
       OPTARG("--print-formats","-pf") print_all_formats();exit(0);
       OPTARG("--mp3","-mp3") write_to_mp3 = true;
       OPTARG("--mp3-quality","-mp3q") das_lame_quality = OPTARG_GETINT(); write_to_mp3 = true;
