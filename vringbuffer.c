@@ -94,7 +94,6 @@ int   vringbuffer_writing_size    (vringbuffer_t *vrb);
 
 #include "vringbuffer.h"
 
-
 ////////////////// Implementation ///////////////////////////////////
 
 
@@ -117,17 +116,6 @@ static void* my_malloc(size_t size1,size_t size2){
 
   return ret;
 }
-
-static bool sem_post_if_waiting(sem_t *sem){
-  int semval;
-  sem_getvalue(sem,&semval);
-  if(semval<=0) {
-    sem_post(sem);
-    return true;
-  } else
-    return false;
-}
-
 
 
 static bool vringbuffer_increase_writer1(vringbuffer_t *vrb,int num_elements,bool first_call){
@@ -192,6 +180,9 @@ vringbuffer_t* vringbuffer_create	(int num_elements_during_startup, int max_num_
   if(vringbuffer_increase_writer1(vrb,num_elements_during_startup,true)==false)
     return NULL;
 
+  vrb->receiver_trigger = create_upwaker();
+  vrb->autoincrease_trigger = create_upwaker();
+
   return vrb;
 }
 
@@ -199,13 +190,13 @@ void vringbuffer_stop_callbacks(vringbuffer_t* vrb){
   vrb->please_stop=true;
 
   if(vrb->autoincrease_callback!=NULL){
-    sem_post(&vrb->autoincrease_trigger);
+    upwaker_wake_up(vrb->autoincrease_trigger);
     pthread_join(vrb->autoincrease_thread, NULL);
     vrb->autoincrease_callback=NULL;
   }
 
   if(vrb->receiver_callback!=NULL){
-    sem_post(&vrb->receiver_trigger);
+    upwaker_wake_up(vrb->receiver_trigger);
     pthread_join(vrb->receiver_thread, NULL);
     vrb->receiver_callback=NULL;
   }
@@ -241,7 +232,7 @@ static void *autoincrease_func(void* arg){
       vringbuffer_increase_writer1(vrb,num_new_elements,false);
 
     if(vrb->autoincrease_interval==0)
-      sem_wait(&vrb->autoincrease_trigger);
+      upwaker_sleep(vrb->autoincrease_trigger);
     else
       usleep(vrb->autoincrease_interval);
   }
@@ -251,14 +242,12 @@ static void *autoincrease_func(void* arg){
 
 
 void vringbuffer_trigger_autoincrease_callback(vringbuffer_t *vrb){
-  sem_post_if_waiting(&vrb->autoincrease_trigger);
+  upwaker_wake_up(vrb->autoincrease_trigger);
 }
 
 void    vringbuffer_set_autoincrease_callback  (vringbuffer_t *vrb, Vringbuffer_autoincrease_callback callback, useconds_t interval){
   vrb->autoincrease_callback = callback;
   vrb->autoincrease_interval = interval;
-
-  sem_init(&vrb->autoincrease_trigger,0,0);
 
   sem_init(&vrb->autoincrease_started,0,0);
   pthread_create(&vrb->autoincrease_thread, NULL, autoincrease_func, vrb);
@@ -303,13 +292,12 @@ static void *receiver_func(void* arg){
   sem_post(&vrb->receiver_started);
 
   while(vrb->please_stop==false){
-    sem_wait(&vrb->receiver_trigger);
+    upwaker_sleep(vrb->receiver_trigger);
     while(vringbuffer_reading_size(vrb) > 0){
       void *buffer=vringbuffer_get_reading(vrb);
       vrb->receiver_callback(vrb,false,buffer);
       vringbuffer_return_reading(vrb,buffer);
     }
-    // This is the <stuck> position. (see below)
   }
 
   return NULL;
@@ -317,8 +305,6 @@ static void *receiver_func(void* arg){
 
 void vringbuffer_set_receiver_callback(vringbuffer_t *vrb,Vringbuffer_receiver_callback receiver_callback){
   vrb->receiver_callback=receiver_callback;
-
-  sem_init(&vrb->receiver_trigger,0,0);
 
   sem_init(&vrb->receiver_started,0,0);
   pthread_create(&vrb->receiver_thread, NULL, receiver_func, vrb);
@@ -337,10 +323,7 @@ void*	vringbuffer_get_writing		(vringbuffer_t *vrb){
 
 void vringbuffer_return_writing	(vringbuffer_t *vrb, void *data){
   jack_ringbuffer_write(vrb->for_reader,(char*)&data,sizeof(void*));
-  if(vrb->receiver_callback!=NULL)
-    if (sem_post_if_waiting(&vrb->receiver_trigger) == false)
-      if (vringbuffer_reading_size(vrb)==1) // Fix for race condition. Callback might not be triggered if receiver_thread are stuck at the <stuck> position.
-        sem_post(&vrb->receiver_trigger);
+  upwaker_wake_up(vrb->receiver_trigger);
 }
 
 int vringbuffer_writing_size	(vringbuffer_t *vrb){

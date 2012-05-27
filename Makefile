@@ -52,8 +52,8 @@ dist: clean
 	rm -fr jack_capture-$(VERSION)
 
 
-jack_capture: setformat.c jack_capture.c vringbuffer.c osc.c Makefile das_config.h config_flags
-	$(CC) $(COMPILEFLAGS) jack_capture.c vringbuffer.c osc.c -o jack_capture $(LINKFLAGS) `cat config_flags`
+jack_capture: setformat.c jack_capture.c vringbuffer.c upwaker.c osc.c Makefile das_config.h config_flags
+	$(CC) $(COMPILEFLAGS) jack_capture.c vringbuffer.c upwaker.c osc.c -o jack_capture $(LINKFLAGS) `cat config_flags`
 
 
 jack_capture_gui2: jack_capture_gui2.cpp

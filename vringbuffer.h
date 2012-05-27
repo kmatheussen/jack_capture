@@ -4,7 +4,10 @@
 #include <unistd.h>
 
 #include <pthread.h>
+
 #include <semaphore.h>
+
+#include "upwaker.h"
 
 
 #include <jack/ringbuffer.h>
@@ -37,13 +40,13 @@ typedef struct vringbuffer_t{
 
   // Receiver callback
   pthread_t receiver_thread;
-  sem_t receiver_trigger;
+  upwaker_t *receiver_trigger;
   sem_t receiver_started;
   Vringbuffer_receiver_callback receiver_callback;
 
   // Autoincrease callback
   pthread_t autoincrease_thread;
-  sem_t autoincrease_trigger;
+  upwaker_t *autoincrease_trigger;
   sem_t autoincrease_started;
   Vringbuffer_autoincrease_callback autoincrease_callback;
   useconds_t autoincrease_interval;
