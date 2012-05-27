@@ -2121,8 +2121,8 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--disable-meter","-dm") use_vu=false;
       OPTARG("--hide-buffer-usage","-hbu") show_bufferusage=false;
       OPTARG("--disable-console","-dc") use_vu=false;show_bufferusage=false;
-      OPTARG("--no-stdin","-ns") no_stdin=true; absolutely_silent=true; use_vu=false; silent=true; show_bufferusage=false;
-      OPTARG("--daemon","") no_stdin=true;
+      OPTARG("--no-stdin","-ns") no_stdin=true;
+      OPTARG("--daemon","") no_stdin=true; absolutely_silent=true; use_vu=false; silent=true; show_bufferusage=false;
       OPTARG("--linear-meter","-lm") vu_dB=false;
       OPTARG("--dB-meter-reference","-dBr") vu_dB=true;vu_bias=powf(10.0f,OPTARG_GETFLOAT()*-0.05f);//from meterbridge
       OPTARG("--meterbridge","-mb") use_meterbridge=true;
