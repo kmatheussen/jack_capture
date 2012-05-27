@@ -1,5 +1,5 @@
 #!/bin/bash
-#script for using a graphical dialog to jack_capture. Written by Svend-Erik Kjær Madsen
+#script for using a graphical dialog to jack_capture. Originally written by Svend-Erik Kjær Madsen
 
 #This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -18,20 +18,22 @@
 
 OPTIONS=$@
 
-if [ ! `which Xdialog` ] ; then 
-    echo "Xdialog needed";
+if [ ! `which zenity` ] ; then
+    echo "zenity needed";
     exit;
 fi
 
 while true
 do
-  Xdialog --stdout --yesno "PRESS YES TO START REC"  10 40
+  zenity zenity  --question --ok-label="Yes" --cancel-label="No" --text="PRESS YES TO START REC"
   case "$?" in
-    0) jack_capture $OPTIONS | Xdialog --stdout --msgbox " RECORDING IN PROGRESS\n PRESS OK TO STOP REC " 10 40
+    0) `dirname $0`/jack_capture --no-stdin $OPTIONS &
+       some_pid=$!
+       zenity --info --text=" RECORDING IN PROGRESS\n PRESS OK TO STOP REC "
+       kill -s SIGINT $some_pid
        echo "Recording stopped"
     ;;
-    1) Xdialog --msgbox "Ok no recording started" 10 40
-       exit;
+    1) exit;
     ;;
   esac
 done
