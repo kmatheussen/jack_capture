@@ -2368,7 +2368,7 @@ void init_various(void){
   verbose_print("main() Print some info.\n");
   // Print some info
   {
-    if(fixed_duration==true){     // User has specified a duration
+    if(fixed_duration==true){
       if(silent==false)
         print_message(
                     "Recording to \"%s\". The recording is going\n"
