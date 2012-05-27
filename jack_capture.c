@@ -124,7 +124,7 @@ static char *soundfile_format_multi="wavex";
 #define MORE_THAN_TWO_CHANNELS_FORMAT SF_FORMAT_WAVEX
 bool silent=false;
 bool verbose=false;
-static bool absolutely_quiet=false;
+static bool absolutely_silent=false;
 static bool create_tme_file=false;
 static bool write_to_stdout=false;
 static bool write_to_mp3 = false;
@@ -222,7 +222,7 @@ void get_free_mem(void){
 char *string_concat(char *s1,char *s2);
 
 static void verbose_print(const char *fmt, ...){
-  if (absolutely_quiet==true) return;
+  if (absolutely_silent==true) return;
   if(verbose==true){
     va_list argp;
     va_start(argp,fmt);
@@ -744,7 +744,7 @@ static void *helper_thread_func(void *arg){
 
 static pthread_mutex_t print_message_mutex = PTHREAD_MUTEX_INITIALIZER;  
 static void print_message(const char *fmt, ...){
-  if (absolutely_quiet==true) return;
+  if (absolutely_silent==true) return;
   
   if(helper_thread_running==0 || write_to_stdout==true){
     va_list argp;
@@ -1959,7 +1959,7 @@ static const char *advanced_help =
   "                                    exits.\n"
   "[--version] or [-v]              -> Prints out version.\n"
   "[--silent] or [-s]               -> Suppresses some common messages printed to the terminal.\n"
-  "[--quiet] or [-q ]               -> Absolutely quiet.\n"
+  "[--absolutely-silent] or [-as]   -> Suppresses all messages printed to the terminal."
   "[--verbose] or [-V]              -> Prints some extra information to the terminal.\n"
   "[--mp3] or [-mp3]                -> Writes to an mp3 file using liblame (LAME).\n"
   "                                    (the --format option has no effect using this option)\n"
@@ -2108,7 +2108,7 @@ void init_arguments(int argc, char *argv[]){
       }
       OPTARG("--version","-v") puts(VERSION);exit(0);
       OPTARG("--silent","-s") silent=true;
-      OPTARG("--quiet","-q") { absolutely_quiet=true; use_vu=false; silent=true; show_bufferusage=false; wait_for_keyboard=false;}
+      OPTARG("--absolutely-silent","-as") { absolutely_silent=true; use_vu=false; silent=true; show_bufferusage=false; wait_for_keyboard=false;}
       OPTARG("--verbose","-V") verbose=true;
       OPTARG("--print-formats","-pf") print_all_formats();exit(0);
       OPTARG("--mp3","-mp3") write_to_mp3 = true;
