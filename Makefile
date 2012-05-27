@@ -1,7 +1,6 @@
 
-DESTDIR =
-prefix = /usr/local
-bindir = $(prefix)/bin
+PREFIX = /usr/local
+bindir = $(PREFIX)/bin
 
 VERSION=0.9.63
 
@@ -11,16 +10,16 @@ CPP=g++
 OPTIMIZE=-O3 -mtune=native
 #OPTIMIZE=-O0 -g
 
-COMPILEFLAGS=$(OPTIMIZE) -DVERSION=\"$(VERSION)\" -Wall -Wextra -Wno-unused
-LINKFLAGS=-ljack -lsndfile -lm -lpthread
+COMPILEFLAGS=$(CFLAGS) $(OPTIMIZE) -DVERSION=\"$(VERSION)\" -Wall -Wextra -Wno-unused
+LINKFLAGS=$(LDFLAGS) -ljack -lsndfile -lm -lpthread -lrt
 
 targets = jack_capture
 
 all: check_dependencies jack_capture
 
 install: $(targets)
-	mkdir -p $(DESTDIR)$(bindir)
-	install -m755 $(targets) $(DESTDIR)$(bindir)
+	mkdir -p $(bindir)
+	install -m755 $(targets) $(bindir)
 
 uninstall:
 	rm $(DESTDIR)$(bindir)/jack_capture
@@ -57,7 +56,7 @@ jack_capture: setformat.c jack_capture.c vringbuffer.c upwaker.c osc.c Makefile 
 
 
 jack_capture_gui2: jack_capture_gui2.cpp
-	$(CPP) $(OPTIMIZE) jack_capture_gui2.cpp `pkg-config --libs --cflags gtk+-2.0` -o jack_capture_gui2
+	$(CPP) $(CPPFLAGS) $(OPTIMIZE) jack_capture_gui2.cpp $(LDFLAGS) `pkg-config --libs --cflags gtk+-2.0` -o jack_capture_gui2
 
 config_flags: Makefile das_config.h
 	cat das_config.h |grep COMPILEFLAGS|sed s/\\/\\/COMPILEFLAGS//|tr '\n' ' ' >config_flags
