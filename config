@@ -38,7 +38,15 @@
 # meterbridge-reference = level
 # jack-transport
 # jack-transport-multi
+# jack-frewheeling
 # manual-connections
 # bufsize = s
 # maxbufsize = s
 # filename = filename
+# osc = port
+# timestamp
+# rotatefile frames
+# hook-open command
+# hook-close command
+# hook-rotate command
+# hook-timing command
