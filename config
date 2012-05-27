@@ -15,7 +15,7 @@
 
 # Variables and switches:
 #
-# duration = n
+# recording-time = n
 # filename-prefix = s
 # leading-zeros = n
 # format = format
