@@ -3,7 +3,7 @@ DESTDIR =
 prefix = /usr/local
 bindir = $(prefix)/bin
 
-VERSION=0.9.61
+VERSION=0.9.62
 
 CC=gcc
 CPP=g++
