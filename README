@@ -1,5 +1,5 @@
 
-jack_capture V0.9.63
+jack_capture V0.9.64
 Released 2012-05-27
 Kjetil S. Matheussen
 
@@ -220,6 +220,12 @@ Cesare Marilungo, Dragan Noveski, and Andras Simon
 
 CHANGES
 *******
+0.9.63 -> 0.9.64
+ * Add necessary -lrt linker flag
+ * Change prefix to PREFIX from makefile, and remove DESTDIR
+ * Fix the jack_capture_gui script
+
+
 0.9.62 -> 0.9.63
  * Fix. Swapped --no-stdin and --daemon options
 
