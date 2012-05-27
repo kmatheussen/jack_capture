@@ -32,6 +32,7 @@
 # hide-buffer-usage
 # disable-console
 # no-stdin
+# daemon
 # linear-meter
 # dB-meter-reference = n
 # meterbridge
