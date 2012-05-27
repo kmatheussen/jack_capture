@@ -25,13 +25,12 @@ fi
 
 while true
 do
-  zenity zenity  --question --ok-label="Yes" --cancel-label="No" --text="PRESS YES TO START REC"
+  zenity  --question --ok-label="Yes" --cancel-label="No" --text="PRESS YES TO START REC"
   case "$?" in
     0) `dirname $0`/jack_capture --no-stdin $OPTIONS &
        some_pid=$!
        zenity --info --text=" RECORDING IN PROGRESS\n PRESS OK TO STOP REC "
        kill -s SIGINT $some_pid
-       echo "Recording stopped"
     ;;
     1) exit;
     ;;
