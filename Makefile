@@ -1,5 +1,4 @@
-
-PREFIX = /usr/local
+PREFIX ?= /usr/local
 bindir = $(PREFIX)/bin
 
 VERSION=0.9.65
@@ -18,11 +17,12 @@ targets = jack_capture
 all: check_dependencies jack_capture
 
 install: $(targets)
-	mkdir -p $(bindir)
-	install -m755 $(targets) $(bindir)
+	install -d $(DESTDIR)$(bindir)
+	install -m755 $(targets) $(DESTDIR)$(bindir)
 
 uninstall:
-	rm $(DESTDIR)$(bindir)/jack_capture
+	rm -f $(DESTDIR)$(bindir)/jack_capture
+	-rmdir $(DESTDIR)$(bindir)
 
 check_dependencies:
 	@echo
