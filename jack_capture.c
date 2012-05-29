@@ -1323,12 +1323,13 @@ static void disk_thread_control_priority(void){
         message_sent=true; } } }
 
 
-static void disk_callback(vringbuffer_t *vrb,bool first_time,void *element){
+static bool disk_callback(vringbuffer_t *vrb,bool first_time,void *element){
   static bool printed_receive_message=false;
   buffer_t *buffer=(buffer_t*)element;
 
-  if(first_time==true)
-    return;
+  if(first_time==true) {
+    return true;
+  }
 
   if(use_jack_transport==true && printed_receive_message==false){
     print_message("Received JackTranportRolling. Recording.\n");
@@ -1381,7 +1382,9 @@ static void disk_callback(vringbuffer_t *vrb,bool first_time,void *element){
   if( buffer->overruns > 0)
     disk_write_overruns(buffer->overruns);
 
-  disk_write(buffer->data,buffer->pos); }
+  disk_write(buffer->data,buffer->pos);
+
+  return true;}
 
 
 static void cleanup_disk(void){

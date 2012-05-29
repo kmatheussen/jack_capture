@@ -16,7 +16,7 @@
 struct vringbuffer_t;
 
 typedef  int (*Vringbuffer_autoincrease_callback) (struct vringbuffer_t *vrb, bool first_time, int reading_size, int writing_size);
-typedef  void (*Vringbuffer_receiver_callback) (struct vringbuffer_t *vrb, bool first_time, void *buffer);
+typedef  bool (*Vringbuffer_receiver_callback) (struct vringbuffer_t *vrb, bool first_time, void *buffer);
 
 typedef struct vringbuffer_list_t{
   struct vringbuffer_list_t *next;

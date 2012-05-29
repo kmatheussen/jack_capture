@@ -291,12 +291,21 @@ static void *receiver_func(void* arg){
   vrb->receiver_callback(vrb,true,NULL);
   sem_post(&vrb->receiver_started);
 
+  void *buffer = NULL;
+
   while(vrb->please_stop==false){
     upwaker_sleep(vrb->receiver_trigger);
+
     while(vringbuffer_reading_size(vrb) > 0){
-      void *buffer=vringbuffer_get_reading(vrb);
-      vrb->receiver_callback(vrb,false,buffer);
-      vringbuffer_return_reading(vrb,buffer);
+
+      if (buffer==NULL)
+        buffer=vringbuffer_get_reading(vrb);
+
+      if (vrb->receiver_callback(vrb,false,buffer) == true) {
+        vringbuffer_return_reading(vrb,buffer);
+        buffer = NULL;
+      } else
+        break;
     }
   }
 
