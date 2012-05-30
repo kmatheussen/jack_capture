@@ -59,22 +59,8 @@ int oscb_frotate (const char *path, const char *types, lo_arg **argv, int argc, 
   return(0);
 }
 
-#if 0
-int oscb_offset (const char *path, const char *types, lo_arg **argv, int argc, lo_message msg, void *user_data){
-  if (verbose==true) fprintf(stderr, "OSC: %s <- f:%f\n", path, argv[0]->f);
-  if (verbose==true) fprintf(stderr, "OSC: %s <- i:%i\n", path, argv[1]->i);
-  return(0);
-}
-#endif
-
-
 /***************************************************************************
  * general callbacks */
-int oscb_quit (const char *path, const char *types, lo_arg **argv, int argc, lo_message msg, void *user_data){
-  fprintf(stderr, "OSC 'quit' command recv.\n");
-  //loop_flag=0;
-  return(0);
-}
 
 static void oscb_error(int num, const char *m, const char *path) {
   fprintf(stderr, "liblo server error %d in path %s: %s\n", num, path, m);
