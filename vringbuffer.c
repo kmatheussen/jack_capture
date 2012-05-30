@@ -301,11 +301,11 @@ static void *receiver_func(void* arg){
       if (buffer==NULL)
         buffer=vringbuffer_get_reading(vrb);
 
-      if (vrb->receiver_callback(vrb,false,buffer) == true) {
-        vringbuffer_return_reading(vrb,buffer);
-        buffer = NULL;
-      } else
+      if (vrb->receiver_callback(vrb,false,buffer) == VRB_CALLBACK_DIDNT_USE_BUFFER)
         break;
+      
+      vringbuffer_return_reading(vrb,buffer);
+      buffer = NULL;
     }
   }
 

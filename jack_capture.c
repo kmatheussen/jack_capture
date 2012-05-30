@@ -1322,13 +1322,24 @@ static void disk_thread_control_priority(void){
           print_message("Error. Could not set higher priority for disk thread.\n");
         message_sent=true; } } }
 
+static bool timemachine_mode = false;
+static bool timemachine_recording = false;
+static float timemachine_prebuffer = 6.0f;
 
-static bool disk_callback(vringbuffer_t *vrb,bool first_time,void *element){
+static enum vringbuffer_receiver_callback_return_t disk_callback(vringbuffer_t *vrb,bool first_time,void *element){
   static bool printed_receive_message=false;
   buffer_t *buffer=(buffer_t*)element;
 
-  if(first_time==true) {
+  if (first_time==true) {
     return true;
+  }
+
+  if (timemachine_mode==true && timemachine_recording==false) {
+    int num_buffers = vringbuffer_reading_size(vrb);
+    if (buffers_to_seconds(num_buffers) > timemachine_prebuffer)
+      return VRB_CALLBACK_USED_BUFFER; // i.e throw away the buffer.
+    else
+      return VRB_CALLBACK_DIDNT_USE_BUFFER;
   }
 
   if(use_jack_transport==true && printed_receive_message==false){
@@ -1384,7 +1395,7 @@ static bool disk_callback(vringbuffer_t *vrb,bool first_time,void *element){
 
   disk_write(buffer->data,buffer->pos);
 
-  return true;}
+  return VRB_CALLBACK_USED_BUFFER;}
 
 
 static void cleanup_disk(void){

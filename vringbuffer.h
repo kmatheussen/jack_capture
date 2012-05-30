@@ -12,11 +12,15 @@
 
 #include <jack/ringbuffer.h>
 
+enum vringbuffer_receiver_callback_return_t {
+  VRB_CALLBACK_DIDNT_USE_BUFFER,
+  VRB_CALLBACK_USED_BUFFER
+};
 
 struct vringbuffer_t;
 
 typedef  int (*Vringbuffer_autoincrease_callback) (struct vringbuffer_t *vrb, bool first_time, int reading_size, int writing_size);
-typedef  bool (*Vringbuffer_receiver_callback) (struct vringbuffer_t *vrb, bool first_time, void *buffer);
+typedef  enum vringbuffer_receiver_callback_return_t (*Vringbuffer_receiver_callback) (struct vringbuffer_t *vrb, bool first_time, void *buffer);
 
 typedef struct vringbuffer_list_t{
   struct vringbuffer_list_t *next;
