@@ -1,6 +1,6 @@
 
-jack_capture V0.9.66
-Released 2012-05-28
+jack_capture V0.9.67
+Released 2012-05-30
 Kjetil S. Matheussen
 
 
@@ -215,11 +215,15 @@ Hermann Meyer (made jack_capture_gui2), Dan Muresan, Orcan Ogetbil, and Alessio 
 
 Thanks to the following for helping to fix bugs, report bugs, give suggestions, etc.:
 Fons Adriaensen, Gabriel J.L. Beckers, Julien Claassen, Dominique Fober, Peder Hedlund,
-Cesare Marilungo, Dragan Noveski, and Andras Simon
+Cesare Marilungo, Jaromír Mike¨, Dragan Noveski, and Andras Simon
 
 
 CHANGES
 *******
+0.9.66 -> 0.9.67
+ * osc_help must be available, even without HAVE_LIBLO
+ * fix for signed / unsigned integer comparison
+
 0.9.65 -> 0.9.66
  * Respect both DESTDIR and PREFIX. (Robin Gareus)
 
