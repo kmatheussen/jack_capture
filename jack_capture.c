@@ -141,7 +141,7 @@ static char *hook_cmd_rotate = NULL;
 static char *hook_cmd_timing = NULL;
 static int64_t rotateframe=0;
 
-static bool timemachine_mode = true;
+static bool timemachine_mode = false;
 static bool timemachine_recording = false;
 static float timemachine_prebuffer = 8.0f;
 static int64_t num_frames_written_to_disk = 0;
