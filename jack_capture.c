@@ -1273,7 +1273,7 @@ static int disk_write(void *data,size_t frames){
   if(!handle_filelimit(frames))
     return 0;
   
-  if(sf_writef_float(soundfile,data,frames) != frames){
+  if((size_t)sf_writef_float(soundfile,data,frames) != frames){
     print_message("Error. Can not write sndfile (%s)\n",
 		sf_strerror(soundfile)
 		);
