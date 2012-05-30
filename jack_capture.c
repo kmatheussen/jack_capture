@@ -2064,7 +2064,6 @@ static const char *advanced_help =
   "  $jack_capture -c 2 -p system:capture*\n"
   "\n";
 
-#if HAVE_LIBLO
 static const char *osc_help = 
   "If called with -O <udp-port-number>, jack-capture can be remote-controlled.\n"
 	"The following OSC (Open Sound Control) messages are understood:\n"
@@ -2085,7 +2084,6 @@ static const char *osc_help =
 	"from listening on that UDP-port (non fatal - \"port is in use\" warning).\n"
 	"jack_capture will work fine, but can not be remote-controlled.\n"
   "\n";
-#endif
 
 void init_arguments(int argc, char *argv[]){
 
