@@ -141,6 +141,12 @@ static char *hook_cmd_rotate = NULL;
 static char *hook_cmd_timing = NULL;
 static int64_t rotateframe=0;
 
+static bool timemachine_mode = true;
+static bool timemachine_recording = false;
+static float timemachine_prebuffer = 8.0f;
+static int64_t num_frames_written_to_disk = 0;
+static bool program_ended_with_return = false;
+
 /* JACK data */
 static jack_port_t **ports;
 static jack_port_t **ports_meterbridge=NULL;
@@ -332,6 +338,9 @@ static int autoincrease_callback(vringbuffer_t *vrb, bool first_call, int readin
   if(first_call){
     set_high_priority();
     return 0; }
+
+  if(timemachine_mode==true && timemachine_recording==false)
+    return 0;
 
 #if 0
   if(1){
@@ -638,6 +647,8 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
     float buflen      = buffers_to_seconds(num_buffers);
     float bufleft     = buffers_to_seconds(num_bufleft);
     int   recorded_seconds = (int)frames_to_seconds(num_frames_recorded);
+    if(timemachine_mode==true)
+      recorded_seconds = (int)frames_to_seconds(num_frames_written_to_disk);
     int   recorded_minutes = recorded_seconds/60;
     printf("%c[32m"
            "Buffer: %.2fs./%.2fs. "
@@ -1259,6 +1270,8 @@ static int mp3_write(void *das_data,size_t frames){
 
 static int disk_write(void *data,size_t frames){
 
+  num_frames_written_to_disk += frames;
+
   if(write_to_stdout==true)
     return stdout_write(data,frames);
 
@@ -1307,24 +1320,24 @@ static int disk_write_overruns(int num_overruns){
 }
 
 static void disk_thread_control_priority(void){
+  int adjusted_writing_size = vringbuffer_writing_size(vringbuffer);
+  if (timemachine_mode==true)
+    adjusted_writing_size += seconds_to_blocks(timemachine_prebuffer*jack_samplerate);
+
   if(1
      && disk_thread_has_high_priority==false
-     && vringbuffer_reading_size(vringbuffer) >= vringbuffer_writing_size(vringbuffer)
+     && vringbuffer_reading_size(vringbuffer) >= adjusted_writing_size
      && use_jack_freewheel==false
      )
     {
       if(set_high_priority()==true){
         disk_thread_has_high_priority=true;
-        print_message("Less than half of the buffer used. Setting higher priority for the disk thread.\n");
+        print_message("Less than half the buffer used. Setting higher priority for the disk thread.\n");
       }else{
         static bool message_sent=false;
         if(message_sent==false)
           print_message("Error. Could not set higher priority for disk thread.\n");
         message_sent=true; } } }
-
-static bool timemachine_mode = false;
-static bool timemachine_recording = false;
-static float timemachine_prebuffer = 6.0f;
 
 static enum vringbuffer_receiver_callback_return_t disk_callback(vringbuffer_t *vrb,bool first_time,void *element){
   static bool printed_receive_message=false;
@@ -1341,6 +1354,10 @@ static enum vringbuffer_receiver_callback_return_t disk_callback(vringbuffer_t *
     else
       return VRB_CALLBACK_DIDNT_USE_BUFFER;
   }
+
+  if (timemachine_mode==true && printed_receive_message==false){
+    print_message("Recording. Press <Return> to stop.\n");
+    printed_receive_message=true; }
 
   if(use_jack_transport==true && printed_receive_message==false){
     print_message("Received JackTranportRolling. Recording.\n");
@@ -1937,9 +1954,25 @@ static void start_jack(void){
 static pthread_t keypress_thread={0};
 static void* keypress_func(void* arg){
   char gakk[64];
+
   turn_off_echo();
-  if(fgets(gakk,49,stdin) != NULL)
+
+  char *fgets_result;
+
+ again:
+
+  fgets_result = fgets(gakk,49,stdin);
+
+  if(timemachine_mode==true && timemachine_recording==false){
+    timemachine_recording = true;
+    goto again;
+  }
+
+  if(fgets_result!=NULL)
     ungetc('\n',stdin);
+
+  program_ended_with_return = true;
+
   sem_post(&stop_sem);
   return NULL;
 }
@@ -2018,6 +2051,9 @@ static const char *advanced_help =
   "[--hook-close c] or [-Hc c]      -> command to execute when closing the session. (see below)\n"
   "[--hook-rotate c] or [-Hr c]     -> command to execute on file-name-rotation. (see below)\n"
   "[--hook-timing c] or [-Ht c]     -> callback when first audio frame is received. (see below)\n"
+  "[--timemachine] or [-tm]         -> jack_capture operates in \"timemachine\" mode.\n"
+  "[--timemachine-prebuffer s]      -> Specify (in seconds) how long time to prebuffer in timemachine mode.\n"
+  "[ -tmpb s]                       -> ------------------------ \"\" ----------------------------------------\n"
   "\n"
   " All hook options take a full-path to an executable as argument.\n"
   " The commands are executed in a fire-and-forget style upon internal events.\n"
@@ -2158,6 +2194,8 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--hook-timing","-Ht") hook_cmd_timing = OPTARG_GETSTRING();
       OPTARG("--timestamp","-S") create_tme_file=true;
       OPTARG("--rotatefile","-Rf") rotateframe = OPTARG_GETINT();
+      OPTARG("--timemachine","-tm") timemachine_mode = true;
+      OPTARG("--timemachine-prebuffer","-tmpb") timemachine_prebuffer=OPTARG_GETFLOAT();
       OPTARG_LAST() base_filename=OPTARG_GETSTRING();
     }OPTARGS_END;
 
@@ -2179,6 +2217,11 @@ void init_arguments(int argc, char *argv[]){
   }else{
     if(min_buffer_time<=0.0f)
       min_buffer_time = DEFAULT_MIN_BUFFER_TIME;
+  }
+
+  if(timemachine_mode==true) {
+    min_buffer_time += timemachine_prebuffer;
+    max_buffer_time += timemachine_prebuffer;
   }
 
   verbose_print("main() find default file format\n");
@@ -2390,9 +2433,14 @@ void init_various(void){
                     base_filename,
                     recording_time);  
     }else{
-      if(silent==false)
-        print_message("Recording to \"%s\". Press <Return> or <Ctrl-C> to stop.\n",base_filename);        
-      //fprintf(stderr,"Recording to \"%s\". Press <Return> or <Ctrl-C> to stop.\n",base_filename);        
+      if(silent==false) {
+        if (timemachine_mode==true) {
+          print_message("Press <Return> to start recording to \"%s\"\n",base_filename);
+          print_message("Press <Ctrl-C> to quit.\n");
+        }else
+          print_message("Recording to \"%s\". Press <Return> or <Ctrl-C> to stop.\n",base_filename);
+        //fprintf(stderr,"Recording to \"%s\". Press <Return> or <Ctrl-C> to stop.\n",base_filename);        
+      }
     }
   }
 
@@ -2494,6 +2542,8 @@ int main (int argc, char *argv[]){
   //get_free_mem();
   //mainpid=getpid();
 
+  char **org_argv = argv;
+
   // remove exe name from argument list.
   argv = &argv[1];
   argc = argc-1;
@@ -2518,6 +2568,18 @@ int main (int argc, char *argv[]){
   wait_until_recording_finished();
 
   stop_recording_and_cleanup();
+
+  if (timemachine_mode==true && program_ended_with_return==true){
+    char temp[10000];
+    int i;
+    temp[0] = '\0';
+    for(i=0; i<argc+1; i++) {
+      strcat(temp," ");
+      strcat(temp,org_argv[i]);
+    }
+    //fprintf(stderr,"-%s-\n",temp);
+    system(temp);
+  }
 
   return 0;
 }
