@@ -980,6 +980,8 @@ static int64_t overruns=0;
 #if HAVE_LIBLO
 bool queued_file_rotate=false;
 void osc_stop() { sem_post(&stop_sem); }
+void osc_tm_start() { timemachine_recording=true; }
+void osc_tm_stop() { program_ended_with_return=true; osc_stop(); }
 #endif
 
 static struct timespec rtime;
@@ -2106,6 +2108,8 @@ static const char *osc_help =
   "\n"
   "  /jack_capture/stop        (no arguments) -- stop recording and exit\n"
   "  /jack_capture/rotate      (no arguments) -- rotate file-name\n"
+  "  /jack_capture/tm/start    (no arguments) -- in timemachine-mode: start recording.\n"
+  "  /jack_capture/tm/stop     (no arguments) -- in timemachine-mode: stop recording.\n"
   "\n"
   "Example:\n"
   "  jack_capture -O 7777\n"

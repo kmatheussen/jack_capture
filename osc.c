@@ -37,13 +37,21 @@ extern bool silent;
 /* message flags */
 extern bool queued_file_rotate;
 void osc_stop();
+void osc_tm_start();
+void osc_tm_stop();
 
 /***************************************************************************
  * specific OSC callbacks */
 
-int oscb_record (const char *path, const char *types, lo_arg **argv, int argc, lo_message msg, void *user_data){
+int oscb_tm_start (const char *path, const char *types, lo_arg **argv, int argc, lo_message msg, void *user_data){
   if (verbose==true) fprintf(stderr, "OSC: %s <- s:%s\n", path, &argv[0]->s);
-  // TODO ?? akin use_jack_transport jack_transport_started
+  osc_tm_start();
+  return(0);
+}
+
+int oscb_tm_stop (const char *path, const char *types, lo_arg **argv, int argc, lo_message msg, void *user_data){
+  if (verbose==true) fprintf(stderr, "OSC: %s <- s:%s\n", path, &argv[0]->s);
+  osc_tm_stop();
   return(0);
 }
 
@@ -59,22 +67,8 @@ int oscb_frotate (const char *path, const char *types, lo_arg **argv, int argc, 
   return(0);
 }
 
-#if 0
-int oscb_offset (const char *path, const char *types, lo_arg **argv, int argc, lo_message msg, void *user_data){
-  if (verbose==true) fprintf(stderr, "OSC: %s <- f:%f\n", path, argv[0]->f);
-  if (verbose==true) fprintf(stderr, "OSC: %s <- i:%i\n", path, argv[1]->i);
-  return(0);
-}
-#endif
-
-
 /***************************************************************************
  * general callbacks */
-int oscb_quit (const char *path, const char *types, lo_arg **argv, int argc, lo_message msg, void *user_data){
-  fprintf(stderr, "OSC 'quit' command recv.\n");
-  //loop_flag=0;
-  return(0);
-}
 
 static void oscb_error(int num, const char *m, const char *path) {
   fprintf(stderr, "liblo server error %d in path %s: %s\n", num, path, m);
@@ -88,6 +82,7 @@ lo_server_thread osc_server = NULL;
 int init_osc(int osc_port) {
   char tmp[8];
   if (osc_port < 0) return(1);
+  if (osc_server) return (1);
   uint32_t port = (osc_port>100 && osc_port< 60000)?osc_port:7654;
 
   snprintf(tmp, sizeof(tmp), "%d", port);
@@ -107,9 +102,10 @@ int init_osc(int osc_port) {
     free (urlstr);
   }
 
-  //lo_server_thread_add_method(osc_server, "/jack_capture/start",  "s", &oscb_record, NULL); 
-  lo_server_thread_add_method(osc_server, "/jack_capture/stop",   "",  &oscb_stop, NULL); 
-  lo_server_thread_add_method(osc_server, "/jack_capture/rotate", "",  &oscb_frotate, NULL); 
+  lo_server_thread_add_method(osc_server, "/jack_capture/tm/start",  "",  &oscb_tm_start, NULL);
+  lo_server_thread_add_method(osc_server, "/jack_capture/tm/stop",   "",  &oscb_tm_stop, NULL);
+  lo_server_thread_add_method(osc_server, "/jack_capture/stop",      "",  &oscb_stop, NULL);
+  lo_server_thread_add_method(osc_server, "/jack_capture/rotate",    "",  &oscb_frotate, NULL);
 
   lo_server_thread_start(osc_server);
   if(verbose==true) fprintf(stderr, "OSC server started on port %i\n",port);
@@ -119,7 +115,9 @@ int init_osc(int osc_port) {
 void shutdown_osc(void) {
   if (!osc_server) return;
   lo_server_thread_stop(osc_server);
+  lo_server_thread_free(osc_server);
   if(verbose==true) fprintf(stderr, "OSC server shut down.\n");
+  osc_server=NULL;
 }
 
 #else
