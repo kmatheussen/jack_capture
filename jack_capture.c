@@ -2463,7 +2463,9 @@ void wait_until_recording_finished(void){
   if(use_jack_freewheel==true)
     print_message("Waiting for Jack Freewheeling .\n");
   
-  sem_wait(&stop_sem);
+  while(sem_wait(&stop_sem)==-1)
+    print_message("Warning: sem_wait failed: %s",strerror(errno));
+
   turn_on_echo();
   if(helper_thread_running==1){
     //      if(use_vu || show_bufferusage)
