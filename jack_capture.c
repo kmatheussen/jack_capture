@@ -541,6 +541,8 @@ static void print_console_top(void){
     for(lokke=0;lokke<vu_len;lokke++)
       putchar(c);
     printf("|");print_ln();
+    printf("%c[0m",0x1b); // reset colors
+    fflush(stdout);
   }else{
     //print_ln();
   }
@@ -567,7 +569,8 @@ static void move_cursor_to_top(void){
            : show_bufferusage
              ? 1
              : 0);
-  msleep(3);
+  printf("%c[0m",0x1b); // reset colors
+  fflush(stdout);
 }
 
 // Console colors:
@@ -669,6 +672,8 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
     printf("%c[0m",0x1b); // reset colors
     fprintf(stderr,"%c[0m",0x1b); // reset colors
   }
+  fflush(stdout);
+  fflush(stderr);
 }
 
 
@@ -761,8 +766,8 @@ static void print_message(const char *fmt, ...){
     va_start(argp,fmt);
     fprintf(stderr,"%c[31m" MESSAGE_PREFIX,0x1b);   // set red color
     vfprintf(stderr,fmt,argp);
-    //fprintf(stderr,"%c[0m",0x1b); // reset colors
-    //msleep(1);
+    fprintf(stderr,"%c[0m",0x1b); // reset colors
+    fflush(stderr);
     va_end(argp);
   }else{
 
@@ -2576,16 +2581,9 @@ int main (int argc, char *argv[]){
   stop_recording_and_cleanup();
 
   if (timemachine_mode==true && program_ended_with_return==true){
-    char temp[10000];
-    int i;
-    temp[0] = '\0';
-    for(i=0; i<argc+1; i++) {
-      strcat(temp," ");
-      strcat(temp,org_argv[i]);
-    }
-    strcat(temp,"&");
-   //fprintf(stderr,"-%s-\n",temp);
-    system(temp);
+    execv (org_argv[0], (char *const *) org_argv);
+    print_message("Error: exec returned.\n");
+    exit(127);
   }
 
   return 0;
