@@ -2581,16 +2581,9 @@ int main (int argc, char *argv[]){
   stop_recording_and_cleanup();
 
   if (timemachine_mode==true && program_ended_with_return==true){
-    char temp[10000];
-    int i;
-    temp[0] = '\0';
-    for(i=0; i<argc+1; i++) {
-      strcat(temp," ");
-      strcat(temp,org_argv[i]);
-    }
-    strcat(temp,"&");
-   //fprintf(stderr,"-%s-\n",temp);
-    system(temp);
+    execv (org_argv[0], (char *const *) org_argv);
+    print_message("Error: exec returned.\n");
+    exit(127);
   }
 
   return 0;
