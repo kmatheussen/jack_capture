@@ -2583,7 +2583,8 @@ int main (int argc, char *argv[]){
       strcat(temp," ");
       strcat(temp,org_argv[i]);
     }
-    //fprintf(stderr,"-%s-\n",temp);
+    strcat(temp,"&");
+   //fprintf(stderr,"-%s-\n",temp);
     system(temp);
   }
 
