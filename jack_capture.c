@@ -631,7 +631,6 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
         for(i=0;i<pos && val>0.0f;i++)
           vol[4+i] = vu_not_recording[i];
 
-        int pos = i;
         vol[4+pos]='\0';
 
         if(vu_peakvals[ch]>=1.0f)
