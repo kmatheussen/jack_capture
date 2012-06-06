@@ -573,6 +573,8 @@ static void move_cursor_to_top(void){
   fflush(stdout);
 }
 
+static char *vu_not_recording="-----------Press <Return> to start recording------------";
+
 // Console colors:
 // http://www.linuxjournal.com/article/8603
 
@@ -624,22 +626,50 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
         vol[1] = '0'+ch;
       }
       
-      for(i=0;i<vu_len;i++)
-        if(vu_peaks[ch]==i && vu_peakvals[ch]>0.0f)
-          vol[4+i] = '*';
-        else if(i<=pos && val>0.0f)
-          vol[4+i] = '-';
+      if (timemachine_mode==true && timemachine_recording==false) {
+
+        for(i=0;i<pos && val>0.0f;i++)
+          vol[4+i] = vu_not_recording[i];
+
+        int pos = i;
+        vol[4+pos]='\0';
+
+        printf(vol);
+
+        for(;i<vu_len;i++)
+          vol[4+i] = vu_not_recording[i];
+
+        if(vu_peakvals[ch]>=1.0f)
+          printf("%c[31m",0x1b); // Red color
         else
-          vol[4+i] = ' ';
-      
-      if(vu_peakvals[ch]>=1.0f){
-        vol[4+vu_len]='!';
-        printf("%c[31m",0x1b); //red color
-        puts(vol);
+          printf("%c[33m",0x1b); // Yellow color
+
+        vol[i+4]='\0';
+        printf(vol+4+pos);
+
         printf("%c[36m",0x1b); // back to cyan
-      }else{
-        vol[4+vu_len]='|';
-        puts(vol);
+        printf("|\n");
+
+      } else {
+
+        for(i=0;i<vu_len;i++)
+          if(vu_peaks[ch]==i && vu_peakvals[ch]>0.0f)
+            vol[4+i] = '*';
+          else if(i<=pos && val>0.0f)
+            vol[4+i] = '-';
+          else
+            vol[4+i] = ' ';
+
+        if(vu_peakvals[ch]>=1.0f){
+          vol[4+vu_len]='!';
+          printf("%c[31m",0x1b); //red color
+          puts(vol);
+          printf("%c[36m",0x1b); // back to cyan
+        }else{
+          vol[4+vu_len]='|';
+          puts(vol);
+        }
+
       }
     }
   }
@@ -653,15 +683,26 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
     if(timemachine_mode==true)
       recorded_seconds = (int)frames_to_seconds(num_frames_written_to_disk);
     int   recorded_minutes = recorded_seconds/60;
+
+    char buffer_string[1000];
+    {
+      sprintf(buffer_string,"%.2fs./%.2fs",bufleft,buflen);
+      int len_buffer=strlen(buffer_string);
+      int i;
+      for(i=len_buffer;i<14;i++)
+        buffer_string[i]=' ';
+      buffer_string[i]='\0';
+    }
+
     printf("%c[32m"
-           "Buffer: %.2fs./%.2fs. "
+           "Buffer: %s"
            "  Time: %d.%s%dm.  %s"
            "DHP: [%c]  "
            "Overruns: %d"
            "%c[0m",
            //fmaxf(0.0f,buflen-bufleft),buflen,
            0x1b, // green color
-           bufleft,buflen,
+           buffer_string,
            recorded_minutes, recorded_seconds%60<10?"0":"", recorded_seconds%60, recorded_minutes<10?" ":"", 
            disk_thread_has_high_priority?'x':' ',
            total_overruns,
@@ -2444,8 +2485,8 @@ void init_various(void){
     }else{
       if(silent==false) {
         if (timemachine_mode==true) {
-          print_message("Press <Return> to start recording to \"%s\"\n",base_filename);
-          print_message("Press <Ctrl-C> to quit.\n");
+          print_message("Waiting to start recording of \"%s\"\n",base_filename);
+          print_message("Press <Ctrl-C> to stop recording and quit.\n");
         }else
           print_message("Recording to \"%s\". Press <Return> or <Ctrl-C> to stop.\n",base_filename);
         //fprintf(stderr,"Recording to \"%s\". Press <Return> or <Ctrl-C> to stop.\n",base_filename);        
