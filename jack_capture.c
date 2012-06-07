@@ -394,14 +394,30 @@ static int findnumports(const char **ports){
 
 static void portnames_add_defaults(void){
   if(cportnames==NULL){
-    cportnames=jack_get_ports(client,NULL,NULL,JackPortIsPhysical|JackPortIsInput);
-    num_cportnames=JC_MAX(DEFAULT_NUM_CHANNELS,findnumports(cportnames));
-    if(num_cportnames==0){
-      fprintf(stderr,"No physical output ports found in your jack setup. Exiting.\n");
-      exit(0);
+
+    {
+      const char **portnames = jack_get_ports(client,NULL,NULL,JackPortIsPhysical|JackPortIsInput);
+      int num_ports    = findnumports(portnames);
+
+      if(num_ports==0){
+        fprintf(stderr,"No physical output ports found in your jack setup. Exiting.\n");
+        exit(0);
+      }
+
+      cportnames = my_calloc(sizeof(char*), num_ports+1);
+      {
+        int i;
+        for(i=0;i<num_ports;i++)
+          cportnames[i] = portnames[i];
+      }
+
+      jack_free(portnames);
     }
+
+    num_cportnames=JC_MAX(DEFAULT_NUM_CHANNELS,findnumports(cportnames));
     if(num_channels==-1)
       num_channels=DEFAULT_NUM_CHANNELS;
+
   }else
     if(num_channels==-1)
       num_channels=num_cportnames;
@@ -1766,6 +1782,8 @@ static int init_meterbridge_ports(){
 
 
 static void free_jack_connections(bool using_calloc, const char **connections) {
+  if (connections==NULL)
+    return;
   if (using_calloc)
     free(connections);
   else
