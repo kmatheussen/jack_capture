@@ -93,6 +93,7 @@ static float min_buffer_time=-1.0f;
 static float max_buffer_time=40.0f;
 static jack_client_t *client=NULL;
 #define DEFAULT_NUM_CHANNELS 2
+#define DEFAULT_NUM_CHANNELS_SDS 1
 static int num_channels=-1;
 static int bitdepth=0;
 static char *base_filename=NULL;
@@ -415,8 +416,13 @@ static void portnames_add_defaults(void){
     }
 
     num_cportnames=JC_MAX(DEFAULT_NUM_CHANNELS,findnumports(cportnames));
-    if(num_channels==-1)
-      num_channels=DEFAULT_NUM_CHANNELS;
+    if(num_channels==-1) {
+      if(!strcasecmp("sds",soundfile_format)){
+        num_channels=DEFAULT_NUM_CHANNELS_SDS;
+      }else{
+        num_channels=DEFAULT_NUM_CHANNELS;
+      }
+    }
 
   }else
     if(num_channels==-1)
@@ -1164,7 +1170,7 @@ static int open_soundfile(void){
   case 32: subformat = SF_FORMAT_PCM_32;
     break;
   default:
-    if(!strcasecmp("flac",soundfile_format)){
+    if(!strcasecmp("flac",soundfile_format) || !strcasecmp("sds",soundfile_format)){
       bitdepth=24;
       subformat=SF_FORMAT_PCM_24;
 #if HAVE_OGG
