@@ -433,7 +433,7 @@ static void portnames_add(char *name){
     new_outportnames          = jack_get_ports(client,pattern,"",0);
     //char **new_outportnames = (char**)jack_get_ports(client,"system:capture_1$","",0);
     add_ch                    = findnumports(new_outportnames);
-		free(pattern);
+    free(pattern);
   }else{
     new_outportnames          = my_calloc(1,sizeof(char*));
     new_outportnames[0]       = name;
@@ -459,8 +459,7 @@ static void portnames_add(char *name){
   }
 }
 
-
-static const char **portnames_get_connections(int ch){
+static const char **portnames_get_connections(int ch, bool *using_calloc){
   if(ch>=num_cportnames)
     return NULL;
   else{      
@@ -474,9 +473,11 @@ static const char **portnames_get_connections(int ch){
 
     if(jack_port_flags(port) & JackPortIsInput){
       ret    = jack_port_get_all_connections(client,port);
+      *using_calloc = false;
     }else{
       ret    = my_calloc(2,sizeof(char*));
       ret[0] = cportnames[ch];
+      *using_calloc = true;
     }
     
     return ret;
@@ -1764,16 +1765,23 @@ static int init_meterbridge_ports(){
 /////////////////////////////////////////////////////////////////////
 
 
+static void free_jack_connections(bool using_calloc, const char **connections) {
+  if (using_calloc)
+    free(connections);
+  else
+    jack_free(connections);
+}
+
 static int compare(const void *a, const void *b){
   return strcmp((const char*)a,(const char*)b);
 }
-
 
 static int reconnect_ports_questionmark(void){
   int ch;
 
   for(ch=0;ch<num_channels;ch++){
-    const char **connections1 = portnames_get_connections(ch);
+    bool using_calloc;
+    const char **connections1 = portnames_get_connections(ch, &using_calloc);
     const char **connections2 = jack_port_get_all_connections(client,ports[ch]);
 
     int memb1 = findnumports(connections1);
@@ -1783,8 +1791,8 @@ static int reconnect_ports_questionmark(void){
       continue;
       
     if(memb1!=memb2){
-      free(connections1);
-      free(connections2);
+      free_jack_connections(using_calloc, connections1);
+      free_jack_connections(false, connections2);
       return 1;
     }
 
@@ -1796,15 +1804,15 @@ static int reconnect_ports_questionmark(void){
       for(lokke=0;lokke<memb1;lokke++){
         //printf("connect_ports \"%s\" \"%s\" \n",connections1[lokke],connections2[lokke]);
         if(strcmp(connections1[lokke],connections2[lokke])){
-          free(connections1);
-          free(connections2);
+          free_jack_connections(using_calloc, connections1);
+          free_jack_connections(false, connections2);
           return 1;
         }
       }
     }
-      
-    free(connections1);
-    free(connections2);
+
+    free_jack_connections(using_calloc, connections1);
+    free_jack_connections(false, connections2);
   }
 
   return 0;
@@ -1825,7 +1833,7 @@ static void disconnect_ports(jack_port_t** ports){
       for(;connections[lokke]!=NULL;lokke++)
         jack_disconnect(client,connections[lokke],jack_port_name(ports[ch]));
     
-    free(connections);
+    free_jack_connections(false, connections);
   }
 }
 
@@ -1839,16 +1847,17 @@ static void connect_ports(jack_port_t** ports){
   for(ch=0;ch<num_channels;ch++){
     int lokke = 0;
 
-    const char **connections = portnames_get_connections(ch);
+    bool using_calloc;
+    const char **connections = portnames_get_connections(ch, &using_calloc);
 
     while(connections && connections[lokke] != NULL){
       int err=jack_connect(client,connections[lokke],jack_port_name(ports[ch]));
       if(err!=0)
-	print_message("\nCan not connect input port %s to %s, errorcode %s\n",
-		    jack_port_name (ports[ch]), connections[lokke],strerror(err));      
+	print_message("\nCould not connect input port %s to %s, errorcode %s\n",
+                      jack_port_name (ports[ch]), connections[lokke],strerror(err));      
       lokke++;
     }
-    free(connections);
+    free_jack_connections(using_calloc, connections);
   }
 }
 
