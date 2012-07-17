@@ -1,7 +1,7 @@
 PREFIX ?= /usr/local
 bindir = $(PREFIX)/bin
 
-VERSION=0.9.67
+VERSION=0.9.68
 
 CC=gcc
 CPP=g++
