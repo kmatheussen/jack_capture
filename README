@@ -1,6 +1,6 @@
 
-jack_capture V0.9.67
-Released 2012-05-30
+jack_capture V0.9.68
+Released 2012-07-17
 Kjetil S. Matheussen
 
 
@@ -220,6 +220,16 @@ Cesare Marilungo, Jaromír Mike¨, Dragan Noveski, Andras Simon, and Anders Vinjar
 
 CHANGES
 *******
+0.9.67 -> 0.6.68
+ * Timemachine mode. Make jack_capture work like Steve Harries timemachine recorder
+   Enable with the -tm / --timemachine option. Set prebuffer time with the -tmpb / --timemachine-prebuffer option.
+   (With help from Robin Gareus)
+ * OSC methods to control time-machine mode. (Robin Gareus)
+ * Check if the call to sem_wait failed. Do not stop recording if so.
+ * Fix reset-colour. (Robin Gareus)
+ * Use jack_free to free port name array, not free. 
+ * Set mono/24bit the default format for SDS files.
+
 0.9.66 -> 0.9.67
  * osc_help must be available, even without HAVE_LIBLO
  * fix for signed / unsigned integer comparison
