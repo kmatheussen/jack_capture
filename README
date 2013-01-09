@@ -199,7 +199,7 @@ To record a stereo file from the soundcard:
 ACKNOWLEDGMENT
 **************
 Originally based on the jackrec program in the jack distribution
-made by Paul Davies and Jack O'Quin. Not much left of that code now.
+made by Paul Davis and Jack O'Quin. Not much left of that code now.
 http://www.jackaudio.org
 
 Peak indicator code for the console meter taken
@@ -220,6 +220,9 @@ Cesare Marilungo, Jaromír Mike¨, Dragan Noveski, Andras Simon, and Anders Vinjar
 
 CHANGES
 *******
+0.6.69 -> (unreleased)
+ * notify user about jack x-runs that occurred during recording (Robin Gareus)
+
 0.9.67 -> 0.6.69
  * Timemachine mode. Make jack_capture work like Steve Harries timemachine recorder
    Enable with the -tm / --timemachine option. Set prebuffer time with the -tmpb / --timemachine-prebuffer option.
