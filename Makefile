@@ -6,7 +6,7 @@ VERSION=0.9.69
 CC=gcc
 CPP=g++
 
-OPTIMIZE=-O3 -mtune=native
+OPTIMIZE=-O3
 #OPTIMIZE=-O0 -g
 
 COMPILEFLAGS=$(CFLAGS) $(OPTIMIZE) -DVERSION=\"$(VERSION)\" -Wall -Wextra -Wno-unused
