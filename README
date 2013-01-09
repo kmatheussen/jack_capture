@@ -1,6 +1,6 @@
 
-jack_capture V0.9.69
-Released 2012-07-17
+jack_capture V0.9.70
+Released 2013-01-09
 Kjetil S. Matheussen
 
 
@@ -79,7 +79,6 @@ $ jack_capture
 
 ADVANCED USAGE
 **************
-
 jack_capture  [--bitdepth n] [--channels n] [--port port] [filename]
               [ -b        n] [ -c        n] [ -p    port]
 
@@ -133,7 +132,7 @@ Additional arguments:
                                     (not implemented yet)
 [--jack-freewheeling]/[-jf]      -> Start program, but do not start recording until jack enters freewheeling mode
                                     When jack leaves freewheeling, the recording is also stopped, and the program ends.
-[--manual-connections]/[-mc]     -> jack_capture will not connect any ports for you.
+[--manual-connections]/[-mc]     -> jack_capture will not connect any ports for you. 
 [--bufsize s] or [-B s]          -> Initial/minimum buffer size in seconds. Default is 8 seconds
                                     for mp3 files, and 4 seconds for all other formats.
 [--maxbufsize] or [-MB]          -> Maximum buffer size in seconds jack_capture will allocate.
@@ -149,6 +148,9 @@ Additional arguments:
 [--hook-close c] or [-Hc c]      -> command to execute when closing the session. (see below)
 [--hook-rotate c] or [-Hr c]     -> command to execute on file-name-rotation. (see below)
 [--hook-timing c] or [-Ht c]     -> callback when first audio frame is received. (see below)
+[--timemachine] or [-tm]         -> jack_capture operates in "timemachine" mode.
+[--timemachine-prebuffer s]      -> Specify (in seconds) how long time to prebuffer in timemachine mode.
+[ -tmpb s]                       -> ------------------------ "" ----------------------------------------
 
  All hook options take a full-path to an executable as argument.
  The commands are executed in a fire-and-forget style upon internal events.
@@ -196,6 +198,7 @@ To record a stereo file from the soundcard:
 
 
 
+
 ACKNOWLEDGMENT
 **************
 Originally based on the jackrec program in the jack distribution
@@ -220,8 +223,9 @@ Cesare Marilungo, Jaromír Mike¨, Dragan Noveski, Andras Simon, and Anders Vinjar
 
 CHANGES
 *******
-0.6.69 -> (unreleased)
+0.9.69 -> 0.9.70
  * notify user about jack x-runs that occurred during recording (Robin Gareus)
+ * Include timemachine documentation in README file
 
 0.9.67 -> 0.6.69
  * Timemachine mode. Make jack_capture work like Steve Harries timemachine recorder
