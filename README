@@ -199,7 +199,7 @@ To record a stereo file from the soundcard:
 ACKNOWLEDGMENT
 **************
 Originally based on the jackrec program in the jack distribution
-made by Paul Davies and Jack O'Quin. Not much left of that code now.
+made by Paul Davis and Jack O'Quin. Not much left of that code now.
 http://www.jackaudio.org
 
 Peak indicator code for the console meter taken
