@@ -1,6 +1,6 @@
 
 /*
-  Kjetil Matheussen, 2005-2012.
+  Kjetil Matheussen, 2005-2013.
     
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -104,7 +104,7 @@ static bool show_bufferusage=true;
 static char *meterbridge_type="vu";
 static char *meterbridge_reference="0";
 //static const int vu_len=56;
-#define vu_len 56
+#define vu_len 65
 static int vu_dB=true;
 static float vu_bias=1.0f;
 static int leading_zeros=1;
