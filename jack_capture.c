@@ -157,6 +157,7 @@ static bool jack_has_been_shut_down=false;
 
 static int64_t unreported_overruns=0;
 static int total_overruns=0;
+static int total_xruns=0;
 
 static volatile int freewheel_mode=0;
 
@@ -720,7 +721,8 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
            "Buffer: %s"
            "  Time: %d.%s%dm.  %s"
            "DHP: [%c]  "
-           "Overruns: %d"
+           "Overruns: %d  "
+           "Xruns: %d"
            "%c[0m",
            //fmaxf(0.0f,buflen-bufleft),buflen,
            0x1b, // green color
@@ -728,6 +730,7 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
            recorded_minutes, recorded_seconds%60<10?"0":"", recorded_seconds%60, recorded_minutes<10?" ":"", 
            disk_thread_has_high_priority?'x':' ',
            total_overruns,
+           total_xruns,
            0x1b // reset color
            );
     print_ln();
@@ -1225,7 +1228,7 @@ static void close_soundfile(void){
 #endif
   }
 
-  hook_file_closed(filename, total_overruns, disk_errors);
+  hook_file_closed(filename, total_overruns + total_xruns, disk_errors);
 
   if (overruns > 0) {
     print_message("jack_capture failed with a total of %d overruns.\n", total_overruns);
@@ -1233,9 +1236,15 @@ static void close_soundfile(void){
   }
   if (disk_errors > 0)
     print_message("jack_capture failed with a total of %d disk errors.\n",disk_errors);
+  if (total_xruns > 0)
+    print_message("jack_capture encountered %d jack x-runs.\n", total_xruns);
+
+  disk_errors = 0;
+  total_overruns = 0;
+  total_xruns = 0;
 }
 
-static int rotate_file(size_t frames){
+static int rotate_file(size_t frames, int reset_totals){
 	store_sync=0;
 	// Explanation: new file will already contain the CURRENT buffer!
 	// but sync-timeframe will only be saved on the start of next jack cycle.
@@ -1251,13 +1260,29 @@ static int rotate_file(size_t frames){
   print_message("Closing %s, and continue writing to %s.\n",filename,filename_new);
   num_files++;
 
-  hook_file_rotated(filename, filename_new, num_files, total_overruns, disk_errors);
+  hook_file_rotated(filename, filename_new, num_files, total_overruns + total_xruns, disk_errors);
 
   free(filename);
   filename=filename_new;
   disksize=0;
-  if(!open_soundfile()) return 0;
 
+  if (reset_totals) {
+    /* reset totals on file-rotate */
+    disk_errors = 0;
+    total_overruns = 0;
+    total_xruns = 0;
+
+    if (overruns > 0) {
+      print_message("jack_capture failed with a total of %d overruns.\n", total_overruns);
+      print_message("   try a bigger buffer than -B %f\n",min_buffer_time);
+    }
+    if (disk_errors > 0)
+      print_message("jack_capture failed with a total of %d disk errors.\n",disk_errors);
+    if (total_xruns > 0)
+      print_message("jack_capture encountered %d jack x-runs.\n", total_xruns);
+  }
+
+  if(!open_soundfile()) return 0;
 
   return 1;
 }
@@ -1271,17 +1296,17 @@ static int handle_filelimit(size_t frames){
 
   if(is_using_wav && (disksize + ((int64_t)new_bytes) >= UINT32_MAX-(1024*1024))){ // (1024*1024) should be enough for the header.
     print_message("Warning. 4GB limit on wav file almost reached.");
-    if (!rotate_file(frames)) return 0;
+    if (!rotate_file(frames, false)) return 0;
   }
 #if HAVE_LIBLO
   else if (queued_file_rotate) {
     queued_file_rotate=false;
     print_message("Note. file-name rotation request received.");
-    if (!rotate_file(frames)) return 0;
+    if (!rotate_file(frames, true)) return 0;
   }
 #endif
   else if (rotateframe > 0 && disksize > (rotateframe*bytes_per_frame*num_channels) ) {
-    if (!rotate_file(frames)) return 0;
+    if (!rotate_file(frames, false)) return 0;
 	}
   disksize+=new_bytes;
   return 1; }
@@ -1678,9 +1703,10 @@ static int process(jack_nframes_t nframes, void *arg){
   return 0;
 }
 
-
-
-
+static int xrun(void *arg){
+	total_xruns++;
+	return 0;
+}
 
 
 /////////////////////////////////////////////////////////////////////
@@ -2466,6 +2492,7 @@ void init_various(void){
   // Init jack 2
   {
     jack_set_process_callback(client, process, NULL);
+    jack_set_xrun_callback(client, xrun, NULL);
 
     jack_on_shutdown(client, jack_shutdown, NULL);
 
