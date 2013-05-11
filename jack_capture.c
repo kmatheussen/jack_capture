@@ -1069,6 +1069,9 @@ static int open_mp3file(void){
   buffer_interleaved = false;
 
   mp3bufsize = buffer_size_in_bytes * 10 * num_channels;
+  if(mp3bufsize<4096*4) // lame_encode_flush requires at least 7200 bytes
+    mp3bufsize=4096*4;
+
   mp3buf = malloc(mp3bufsize);
 
   lame = lame_init();
@@ -1217,6 +1220,10 @@ static int open_soundfile(void){
 }
 
 
+#if HAVE_LAME
+static int mp3_write(void *das_data,size_t frames,bool do_flush);
+#endif
+
 static void close_soundfile(void){
 
   if(write_to_stdout==false){
@@ -1224,6 +1231,7 @@ static void close_soundfile(void){
       sf_close (soundfile);
 #if HAVE_LAME
     if(mp3file!=NULL){
+      mp3_write(NULL,0,true); // flush
       lame_close(lame);
       fclose(mp3file);
     }
@@ -1351,12 +1359,17 @@ static int stdout_write(sample_t *buffer,size_t frames){
   return 1; }
 
 #if HAVE_LAME
-static int mp3_write(void *das_data,size_t frames){
-  sample_t *data1=(sample_t*)das_data;
-  sample_t *data2=&data1[frames];
+static int mp3_write(void *das_data,size_t frames,bool do_flush){
+  int size;
 
-  int size = lame_encode_buffer_float(lame, data1,data2, frames, mp3buf, mp3bufsize);
-  //fprintf(stderr,"size: %d\n",size);
+  if(do_flush){
+    size = lame_encode_flush(lame, mp3buf, mp3bufsize);
+    //print_message("mp3 flush size: %d\n",size);
+  }else{
+    sample_t *data1=(sample_t*)das_data;
+    sample_t *data2=&data1[frames];
+    size = lame_encode_buffer_float(lame, data1,data2, frames, mp3buf, mp3bufsize);
+  }
 
   if(size>0)
     fwrite(mp3buf,size,1,mp3file);
@@ -1374,7 +1387,7 @@ static int disk_write(void *data,size_t frames){
 
 #if HAVE_LAME
   if(write_to_mp3==true)
-    return mp3_write(data,frames);
+    return mp3_write(data,frames,false);
 #endif
 
   if(soundfile==NULL)
