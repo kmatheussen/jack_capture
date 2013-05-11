@@ -1068,12 +1068,7 @@ static int mp3bufsize;
 static int open_mp3file(void){
   buffer_interleaved = false;
 
-  if(num_channels!=2){
-    print_message("Error. 2 channels supported for mp3 files only. (%d)\n",num_channels);
-    return 0;
-  }
-
-  mp3bufsize = buffer_size_in_bytes * 10;
+  mp3bufsize = buffer_size_in_bytes * 10 * num_channels;
   mp3buf = malloc(mp3bufsize);
 
   lame = lame_init();
@@ -1081,6 +1076,8 @@ static int open_mp3file(void){
     print_message("lame_init failed.\n");
     return 0;
   }
+
+  lame_set_num_channels(lame, num_channels);
 
   lame_set_in_samplerate(lame,(int)jack_samplerate);
   lame_set_out_samplerate(lame,(int)jack_samplerate);
@@ -1100,13 +1097,18 @@ static int open_mp3file(void){
     }
   }
 
+  if(lame_get_num_channels(lame)!=num_channels){
+    print_message("Error. lame does not support %d channel mp3 files.\n",num_channels);
+    return 0;
+  }
+
   mp3file = fopen(filename,"w");
   if(mp3file == NULL){
     print_message("Can not open file \"%s\" for output (%s)\n", filename, strerror(errno));
     return 0;
   }
 
-	hook_file_opened(filename);
+  hook_file_opened(filename);
   return 1;
 }
 #endif
