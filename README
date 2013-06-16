@@ -1,6 +1,6 @@
 
-jack_capture V0.9.70
-Released 2013-01-09
+jack_capture V0.9.71
+Released 2013-06-16
 Kjetil S. Matheussen
 
 
@@ -223,6 +223,10 @@ Cesare Marilungo, Jaromír Mike¨, Dragan Noveski, Andras Simon, and Anders Vinjar
 
 CHANGES
 *******
+0.7.70 -> 0.9.71
+ * Dont limit mp3 files to stereo only
+ * Flush mp3 files before closing
+
 0.9.69 -> 0.9.70
  * notify user about jack x-runs that occurred during recording (Robin Gareus)
  * Include timemachine documentation in README file
