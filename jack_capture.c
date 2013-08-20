@@ -660,7 +660,7 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
         if(vu_peakvals[ch]>=1.0f)
           printf("%c[31m",0x1b); // Peaking, show red color
 
-        printf(vol);
+        printf("%s", vol);
 
         for(;i<vu_len;i++)
           vol[4+i] = vu_not_recording[i];
@@ -668,7 +668,7 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
         printf("%c[33m",0x1b); // Yellow color
 
         vol[i+4]='\0';
-        printf(vol+4+pos);
+        printf("%s", vol+4+pos);
 
         printf("%c[36m",0x1b); // back to cyan
         printf("|\n");

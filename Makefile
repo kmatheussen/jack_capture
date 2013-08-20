@@ -9,7 +9,7 @@ CPP=g++
 OPTIMIZE=-O3
 #OPTIMIZE=-O0 -g
 
-COMPILEFLAGS=$(CFLAGS) $(OPTIMIZE) -DVERSION=\"$(VERSION)\" -Wall -Wextra -Wno-unused
+COMPILEFLAGS=$(CPPFLAGS) $(CFLAGS) $(OPTIMIZE) -DVERSION=\"$(VERSION)\" -Wall -Wextra -Wno-unused
 LINKFLAGS=$(LDFLAGS) -ljack -lsndfile -lm -lpthread -lrt
 
 targets = jack_capture
