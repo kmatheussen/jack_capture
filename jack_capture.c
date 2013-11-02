@@ -253,7 +253,7 @@ static bool set_high_priority(void){
     prio++;
   
   if(prio==0 && shown_warning==false){
-    print_message("Warning. Could not set higher priority for a SCHED_FIFO process using setpriority().\n");
+    print_message("Warning. Could not set higher priority for a SCHED_OTHER process using setpriority().\n");
     shown_warning=true; }
 
   if(prio < 0)
