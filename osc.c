@@ -121,7 +121,7 @@ void shutdown_osc(void) {
 }
 
 #else
-int init_osc(int osc_port) {return(1);}
+int init_osc(int osc_port) {(void)osc_port;return(1);}
 void shutdown_osc(void) {;}
 #endif
 

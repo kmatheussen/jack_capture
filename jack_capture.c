@@ -334,6 +334,9 @@ static float buffers_to_seconds(int buffers){
 
 
 static int autoincrease_callback(vringbuffer_t *vrb, bool first_call, int reading_size, int writing_size){
+  (void)vrb;
+  (void)reading_size;
+
   if(use_jack_freewheel)
     return 0;
 
@@ -758,6 +761,8 @@ static int init_meterbridge_ports();
 static bool is_helper_running=true;
 
 static void *helper_thread_func(void *arg){
+  (void)arg;
+
   helper_thread_running=1;
 
   if(use_vu||show_bufferusage)
@@ -942,6 +947,7 @@ int asprintf(char **buffer, char *fmt, ...) {
 }
 
 static void wait_child(int sig){
+  (void)sig;
   wait(NULL);
 }
 
@@ -1644,6 +1650,8 @@ enum{
 static int process_state=NOT_STARTED;
 
 static int process(jack_nframes_t nframes, void *arg){
+  (void)arg;
+
   jack_transport_state_t state=0;
 
   if(use_jack_transport==true){
@@ -1719,8 +1727,9 @@ static int process(jack_nframes_t nframes, void *arg){
 }
 
 static int xrun(void *arg){
-	total_xruns++;
-	return 0;
+  (void)arg;
+  total_xruns++;
+  return 0;
 }
 
 
@@ -1929,6 +1938,8 @@ static void connect_ports(jack_port_t** ports){
 static sem_t connection_semaphore;
 
 static void* connection_thread(void *arg){
+  (void)arg;
+
   while(1){
     sem_wait(&connection_semaphore);
     if(is_running==0)
@@ -1971,12 +1982,16 @@ static void stop_connection_thread(void){
 }
 
 static int graphordercallback(void *arg){
+  (void)arg;
+
   if (!freewheel_mode)
     wake_up_connection_thread();
   return 0;
 }
 
 static void freewheelcallback(int starting, void *arg){
+  (void)arg;
+
   freewheel_mode = starting;
 
   if (use_jack_freewheel==true && starting==0) {
@@ -1988,19 +2003,21 @@ static void freewheelcallback(int starting, void *arg){
 
 #if NEW_JACK_LATENCY_API
 static void jack_latency_cb(jack_latency_callback_mode_t mode, void *arg) {
-	int ch;
-	jack_latency_range_t jlty;
-	jack_nframes_t max_latency = 0;
+  (void)arg;
 
-	if (mode != JackCaptureLatency) return;
-	if (!ports) return;
-
-	for(ch=0;ch<num_channels;ch++) {
-		if(ports[ch]==0) continue;
-		jack_port_get_latency_range(ports[ch], JackCaptureLatency, &jlty);
-		if (jlty.max > max_latency) max_latency= jlty.max;
-	}
-	j_latency = max_latency;
+  int ch;
+  jack_latency_range_t jlty;
+  jack_nframes_t max_latency = 0;
+  
+  if (mode != JackCaptureLatency) return;
+  if (!ports) return;
+  
+  for(ch=0;ch<num_channels;ch++) {
+    if(ports[ch]==0) continue;
+    jack_port_get_latency_range(ports[ch], JackCaptureLatency, &jlty);
+    if (jlty.max > max_latency) max_latency= jlty.max;
+  }
+  j_latency = max_latency;
 }
 #endif
 
@@ -2032,11 +2049,13 @@ static void create_ports(void){
 
 
 static void finish(int sig){
+  (void)sig;
   //turn_on_echo(); //Don't think we can do this from a signal handler...
   sem_post(&stop_sem);
 }
 
 static void jack_shutdown(void *arg){
+  (void)arg;
   fprintf(stderr,"jack_capture: JACK shutdown.\n");
   jack_has_been_shut_down=true;
   sem_post(&stop_sem);
@@ -2074,6 +2093,8 @@ static void start_jack(void){
 
 static pthread_t keypress_thread={0};
 static void* keypress_func(void* arg){
+  (void)arg;
+
   char gakk[64];
 
   turn_off_echo();
