@@ -486,6 +486,8 @@ static void portnames_add(char *name){
 }
 
 static const char **portnames_get_connections(int ch, bool *using_calloc){
+  *using_calloc = true; // silence compiler warning. (fix: logic of program is too complicated)
+  
   if(ch>=num_cportnames)
     return NULL;
   else{      
