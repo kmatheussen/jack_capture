@@ -1,0 +1,24 @@
+leak:OS_getmem
+leak:talloc_realloc__
+leak:PR_init_plugin_types
+
+# allow reading and writing floats from various threads simultaneously:
+race:safe_float_write
+race:safe_volatile_float_write
+race:safe_volatile_float_read
+race:safe_float_read
+race:safe_double_write
+race:safe_double_read
+race:safe_pointer_read
+race:safe_int_write
+race:safe_int_read
+race:Compressor_wrapper::get_graph_value
+race:Compressor_wrapper::set_parameter
+race:QCoreApplication::postEvent
+race:RT_call_instead_of_process
+
+# Calling 3rd party code:
+race:call_ladspa_get_descriptor_func
+
+
+#interceptor_via_lib:fglrx_dri.so
