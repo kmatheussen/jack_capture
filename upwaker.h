@@ -19,8 +19,10 @@
 
 #include <pthread.h>
 
+#include "atomic.h"
+
 typedef struct {
-  int please_wakeup;
+  DEFINE_ATOMIC(bool, please_wakeup);
   pthread_mutex_t mutex;
   pthread_cond_t cond;
 } upwaker_t;

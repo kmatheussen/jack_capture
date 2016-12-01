@@ -60,6 +60,8 @@ int  init_osc(int osc_port);
 void shutdown_osc(void);
 #endif
 
+#include "atomic.h"
+
 #include "vringbuffer.h"
 
 
@@ -109,7 +111,7 @@ static int vu_dB=true;
 static float vu_bias=1.0f;
 static int leading_zeros=1;
 static char *filename_prefix="jack_capture_";
-static int64_t num_frames_recorded=0;
+static DEFINE_ATOMIC(int64_t, num_frames_recorded)=0;
 static int64_t num_frames_to_record=0;
 static bool fixed_duration=false;
 static bool no_stdin=false;
@@ -149,7 +151,7 @@ static int64_t num_frames_written_to_disk = 0;
 static bool program_ended_with_return = false;
 
 /* JACK data */
-static jack_port_t **ports;
+static DEFINE_ATOMIC(jack_port_t**, g_ports) = NULL;
 static jack_port_t **ports_meterbridge=NULL;
 typedef jack_default_audio_sample_t sample_t;
 static float jack_samplerate;
@@ -179,8 +181,8 @@ static float *vu_peakvals=NULL;
 static void print_message(const char *fmt, ...);
 
 /* Synchronization between jack process thread and disk thread. */
-static volatile int is_initialized=0; // This $@#$@#$ variable is needed because jack ports must be initialized _after_ (???) the client is activated. (stupid jack)
-static volatile int is_running=1; // Mostly used to stop recording as early as possible.
+static DEFINE_ATOMIC(bool, is_initialized) = false; // This $@#$@#$ variable is needed because jack ports must be initialized _after_ (???) the client is activated. (stupid jack)
+static DEFINE_ATOMIC(bool, is_running) = true; // Mostly used to stop recording as early as possible.
 
 
 /* Buffer */
@@ -707,7 +709,7 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
     int   num_buffers = (vringbuffer_reading_size(vringbuffer)+ vringbuffer_writing_size(vringbuffer));
     float buflen      = buffers_to_seconds(num_buffers);
     float bufleft     = buffers_to_seconds(num_bufleft);
-    int   recorded_seconds = (int)frames_to_seconds(num_frames_recorded);
+    int   recorded_seconds = (int)frames_to_seconds(ATOMIC_GET(num_frames_recorded));
     if(timemachine_mode==true)
       recorded_seconds = (int)frames_to_seconds(num_frames_written_to_disk);
     int   recorded_minutes = recorded_seconds/60;
@@ -1064,7 +1066,7 @@ void osc_tm_stop() { program_ended_with_return=true; osc_stop(); }
 #endif
 
 static struct timespec rtime;
-static int store_sync = 0;
+static DEFINE_ATOMIC(int, g_store_sync) = 0;
 static int ssync_offset = 0;
 static jack_nframes_t j_latency = 0;
 
@@ -1263,7 +1265,7 @@ static void close_soundfile(void){
 }
 
 static int rotate_file(size_t frames, int reset_totals){
-	store_sync=0;
+  ATOMIC_SET(g_store_sync, 0);
 	// Explanation: new file will already contain the CURRENT buffer!
 	// but sync-timeframe will only be saved on the start of next jack cycle.
 	//
@@ -1422,7 +1424,7 @@ static int disk_write_overruns(int num_overruns){
                   "    Try a bigger buffer than -B %f\n%s",
                   num_overruns,num_overruns==1 ? "" : "s",
                   min_buffer_time,
-                  is_running != 0 ? "Continue recording...\n" : ""
+                  ATOMIC_GET(is_running) ? "Continue recording...\n" : ""
                   );
 
   overruns+=num_overruns;
@@ -1487,8 +1489,9 @@ static enum vringbuffer_receiver_callback_return_t disk_callback(vringbuffer_t *
 
   disk_thread_control_priority();
 
-  if (store_sync==1) {
-    store_sync=2;
+  
+  if (ATOMIC_COMPARE_AND_SET_INT(g_store_sync, 1, 2)) {
+    
     hook_rec_timimg(filename, rtime, j_latency);
 
     if (create_tme_file) { /* write .tme info-file */
@@ -1572,15 +1575,15 @@ static void process_fill_buffer(sample_t *in[],buffer_t *buffer,int i,int end){
         sample_t val=in[ch][i];
         data[pos++]=val;
         val=fabsf(val);
-        if(val>vu_vals[ch])
-          vu_vals[ch]=val;
+        if(val>safe_float_read(&vu_vals[ch]))
+          safe_float_write(&vu_vals[ch], val);
       }
     }
   }else{
     int start_i = i;
     for(ch=0;ch<num_channels;ch++){
       sample_t *curr_in=in[ch];
-      float max_vu=vu_vals[ch];
+      float max_vu=safe_float_read(&vu_vals[ch]);
       for(i = start_i; i<end ; i++){
         sample_t val=curr_in[i];
         data[pos++]=val * 32767.9; // weird lame format (lame is currently the only one using non-interleaved buffers, so the multiplication can be done here)
@@ -1588,7 +1591,7 @@ static void process_fill_buffer(sample_t *in[],buffer_t *buffer,int i,int end){
         if(val>max_vu)
           max_vu=val;
       }
-      vu_vals[ch] = max_vu;
+      safe_float_write(&vu_vals[ch], max_vu);
     }
   }
   //fprintf(stderr,"pos: %d %d\n",pos,num_channels);
@@ -1615,6 +1618,8 @@ static void process_fill_buffers(int jack_block_size){
   sample_t *in[num_channels];
   int i=0,ch;
 
+  jack_port_t **ports = ATOMIC_GET(g_ports);
+  
   for(ch=0;ch<num_channels;ch++)
     in[ch]=jack_port_get_buffer(ports[ch],jack_block_size);
       
@@ -1673,39 +1678,41 @@ static int process(jack_nframes_t nframes, void *arg){
       return 0;
   }
 
-  if(is_initialized==0)
+  if(ATOMIC_GET(is_initialized)==false)
     return 0;
 
-  if(is_running==0)
+  if(ATOMIC_GET(is_running)==false)
     return 0;
 
   if(process_state==RECORDING_FINISHED)
     return 0;
 
-	if (store_sync==0) {
+  jack_port_t **ports = ATOMIC_GET(g_ports);
+  
+  if (ATOMIC_GET(g_store_sync)==0) {
 #ifndef NEW_JACK_LATENCY_API
-		int ch;
-		j_latency=0;
-		for(ch=0;ch<num_channels;ch++) {
-			const jack_nframes_t jpl= jack_port_get_total_latency(client,ports[ch]);
-			if (j_latency < jpl) j_latency = jpl;
-		}
+    int ch;
+    j_latency=0;
+    for(ch=0;ch<num_channels;ch++) {
+      const jack_nframes_t jpl= jack_port_get_total_latency(client,ports[ch]);
+      if (j_latency < jpl) j_latency = jpl;
+    }
 #endif
-		clock_gettime(CLOCK_REALTIME, &rtime);
-		store_sync=1;
-	}
+    clock_gettime(CLOCK_REALTIME, &rtime);
+    ATOMIC_SET(g_store_sync, 1);
+  }
 
   if(fixed_duration==true){     // User has specified a duration
     int num_frames;
     
-    num_frames=JC_MIN(nframes,num_frames_to_record - num_frames_recorded);
+    num_frames=JC_MIN(nframes,num_frames_to_record - ATOMIC_GET(num_frames_recorded));
 
     if(num_frames>0)
       process_fill_buffers(num_frames);
 
-    num_frames_recorded += num_frames;
+    ATOMIC_ADD(num_frames_recorded, num_frames);
 
-    if(num_frames_recorded==num_frames_to_record){
+    if(ATOMIC_GET(num_frames_recorded)==num_frames_to_record){
       send_buffer_to_disk_thread(current_buffer);
       sem_post(&stop_sem);
       process_state=RECORDING_FINISHED;
@@ -1713,7 +1720,7 @@ static int process(jack_nframes_t nframes, void *arg){
 
   }else{
     process_fill_buffers(nframes);
-    num_frames_recorded += nframes;
+    ATOMIC_ADD(num_frames_recorded, nframes);
     if(    (use_jack_transport==true && state==JackTransportStopped)
 	|| (use_jack_freewheel==true && freewheel_mode==0)
       ){
@@ -1855,6 +1862,8 @@ static int compare(const void *a, const void *b){
 static int reconnect_ports_questionmark(void){
   int ch;
 
+  jack_port_t **ports = ATOMIC_GET(g_ports);
+  
   for(ch=0;ch<num_channels;ch++){
     bool using_calloc;
     const char **connections1 = portnames_get_connections(ch, &using_calloc);
@@ -1944,16 +1953,19 @@ static void* connection_thread(void *arg){
 
   while(1){
     sem_wait(&connection_semaphore);
-    if(is_running==0)
+    if(ATOMIC_GET(is_running)==false)
       goto done;
     if(connect_meterbridge==1){
       connect_ports(ports_meterbridge);
       connect_meterbridge=0;
       continue;
     }
-    if(is_initialized && reconnect_ports_questionmark()){
+    if(ATOMIC_GET(is_initialized) && reconnect_ports_questionmark()){
       if(silent==false)
 	print_message("Reconnecting ports.\n");
+
+      jack_port_t **ports = ATOMIC_GET(g_ports);
+        
       disconnect_ports(ports);
       connect_ports(ports);
 
@@ -2012,6 +2024,9 @@ static void jack_latency_cb(jack_latency_callback_mode_t mode, void *arg) {
   jack_nframes_t max_latency = 0;
   
   if (mode != JackCaptureLatency) return;
+
+  jack_port_t **ports = ATOMIC_GET(g_ports);
+  
   if (!ports) return;
   
   for(ch=0;ch<num_channels;ch++) {
@@ -2024,7 +2039,7 @@ static void jack_latency_cb(jack_latency_callback_mode_t mode, void *arg) {
 #endif
 
 static void create_ports(void){
-  ports = (jack_port_t **) my_calloc (sizeof (jack_port_t *),num_channels);  
+  jack_port_t** ports = my_calloc (sizeof (jack_port_t *),num_channels);  
   {
     int ch;
     for(ch=0;ch<num_channels;ch++) {
@@ -2038,6 +2053,8 @@ static void create_ports(void){
       }
     }
   }
+
+  ATOMIC_SET(g_ports, ports);
 }
 
 
@@ -2550,7 +2567,7 @@ void init_various(void){
 
     create_ports();
     if(use_manual_connections==false)
-      connect_ports(ports);
+      connect_ports(ATOMIC_GET(g_ports));
   }
 
 
@@ -2558,7 +2575,7 @@ void init_various(void){
   // Everything initialized.
   //   (The threads are waiting for this variable, not the other way around, so now it just needs to be set.)
   {
-    is_initialized=1;
+    ATOMIC_SET(is_initialized, true);
     wake_up_connection_thread(); // Usually (?) not necessarry, but just in case.
   }
 
@@ -2630,7 +2647,7 @@ void wait_until_recording_finished(void){
 void stop_recording_and_cleanup(void){
   verbose_print("main() Stop recording and clean up.\n");
 
-  is_running=0;
+  ATOMIC_SET(is_running, false);
   
   if(use_manual_connections==false)
     stop_connection_thread();
