@@ -10,12 +10,7 @@ OPTIMIZE=-O3
 #OPTIMIZE=-O0 -g
 
 COMPILEFLAGS=$(CFLAGS) $(OPTIMIZE) -DVERSION=\"$(VERSION)\" -Wall -Wextra -Wno-unused
-LINKFLAGS=$(LDFLAGS) -ljack -lsndfile -lm -lpthread
-
-OS := $(shell uname)
-ifneq ($(OS),Darwin)
-	LINKFLAGS += -lrt
-endif
+LINKFLAGS=$(LDFLAGS) -ljack -lsndfile -lm -lpthread -lrt
 
 targets = jack_capture
 
