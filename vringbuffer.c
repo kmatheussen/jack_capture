@@ -222,7 +222,11 @@ void vringbuffer_delete(vringbuffer_t* vrb){
 static void *autoincrease_func(void* arg){
   vringbuffer_t *vrb=arg;
   vrb->autoincrease_callback(vrb,true,0,0);
+#ifdef __APPLE__
+  semaphore_signal(vrb->autoincrease_started);
+#else
   sem_post(&vrb->autoincrease_started);
+#endif
   while(vrb->please_stop==false){
     int reading_size = vringbuffer_reading_size(vrb);
     int writing_size = vringbuffer_writing_size(vrb);
@@ -249,10 +253,17 @@ void    vringbuffer_set_autoincrease_callback  (vringbuffer_t *vrb, Vringbuffer_
   vrb->autoincrease_callback = callback;
   vrb->autoincrease_interval = interval;
 
+#ifdef __APPLE__
+  semaphore_create(mach_task_self(), &vrb->autoincrease_started, SYNC_POLICY_FIFO, 0);
+#else
   sem_init(&vrb->autoincrease_started,0,0);
+#endif
   pthread_create(&vrb->autoincrease_thread, NULL, autoincrease_func, vrb);
+#ifdef __APPLE__
+  semaphore_wait(vrb->autoincrease_started);
+#else
   sem_wait(&vrb->autoincrease_started);
-  
+#endif  
 }
 
 void	vringbuffer_increase		(vringbuffer_t *vrb, int num_elements, void **elements){
@@ -289,7 +300,11 @@ int vringbuffer_reading_size    (vringbuffer_t *vrb){
 static void *receiver_func(void* arg){
   vringbuffer_t *vrb=arg;
   vrb->receiver_callback(vrb,true,NULL);
+#ifdef __APPLE__
+  semaphore_signal(vrb->receiver_started);
+#else
   sem_post(&vrb->receiver_started);
+#endif
 
   void *buffer = NULL;
 
@@ -315,9 +330,17 @@ static void *receiver_func(void* arg){
 void vringbuffer_set_receiver_callback(vringbuffer_t *vrb,Vringbuffer_receiver_callback receiver_callback){
   vrb->receiver_callback=receiver_callback;
 
+#ifdef __APPLE__
+  semaphore_create(mach_task_self(), &vrb->receiver_started, SYNC_POLICY_FIFO, 0);
+#else
   sem_init(&vrb->receiver_started,0,0);
+#endif
   pthread_create(&vrb->receiver_thread, NULL, receiver_func, vrb);
+#ifdef __APPLE__
+  semaphore_wait(vrb->receiver_started);
+#else
   sem_wait(&vrb->receiver_started);
+#endif
 }
 
 

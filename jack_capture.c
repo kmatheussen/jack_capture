@@ -31,13 +31,19 @@
 #include <unistd.h>
 #include <sndfile.h>
 #include <pthread.h>
+#ifdef __APPLE__
+#include <mach/mach.h>
+#else
 #include <semaphore.h>
+#endif
 #include <math.h>
 #include <stdarg.h>
 
 #include <termios.h>
 
+#ifndef __APPLE__
 #include <sys/sysinfo.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -206,8 +212,11 @@ static pthread_t connect_thread={0} ;
 
 
 // das stop semaphore
+#ifdef __APPLE__
+static semaphore_t stop_sem;
+#else
 static sem_t stop_sem;
-
+#endif
 
 
 
@@ -899,6 +908,7 @@ static void stop_helper_thread(void){
 #ifdef _WIN32
 #define vsnprintf _vsnprintf
 #endif
+#ifndef __APPLE__
 int asprintf(char **buffer, char *fmt, ...) {
     /* Guess we need no more than 200 chars of space. */
     int size = 200;
@@ -935,6 +945,7 @@ int asprintf(char **buffer, char *fmt, ...) {
     if (nchars < 0) return nchars;
     return size;
 }
+#endif
 #endif
 
 #define ARGS_ADD_ARGV(FMT,ARG) \
@@ -1060,7 +1071,11 @@ static int64_t overruns=0;
 
 #if HAVE_LIBLO
 bool queued_file_rotate=false;
+#ifdef __APPLE__
+void osc_stop() { semaphore_signal(stop_sem); }
+#else
 void osc_stop() { sem_post(&stop_sem); }
+#endif
 void osc_tm_start() { timemachine_recording=true; }
 void osc_tm_stop() { program_ended_with_return=true; osc_stop(); }
 #endif
@@ -1714,7 +1729,11 @@ static int process(jack_nframes_t nframes, void *arg){
 
     if(ATOMIC_GET(num_frames_recorded)==num_frames_to_record){
       send_buffer_to_disk_thread(current_buffer);
+#ifdef __APPLE__
+      semaphore_signal(stop_sem);
+#else
       sem_post(&stop_sem);
+#endif
       process_state=RECORDING_FINISHED;
     }
 
@@ -1725,7 +1744,11 @@ static int process(jack_nframes_t nframes, void *arg){
 	|| (use_jack_freewheel==true && freewheel_mode==0)
       ){
       send_buffer_to_disk_thread(current_buffer);
+#ifdef __APPLE__
+      semaphore_signal(stop_sem);
+#else
       sem_post(&stop_sem);
+#endif
       process_state=RECORDING_FINISHED;
     }
   }
@@ -1946,13 +1969,22 @@ static void connect_ports(jack_port_t** ports){
   }
 }
 
+#ifdef __APPLE__
+static semaphore_t connection_semaphore;
+#else
 static sem_t connection_semaphore;
+#endif
+
 
 static void* connection_thread(void *arg){
   (void)arg;
 
   while(1){
+#ifdef __APPLE__
+    semaphore_wait(connection_semaphore);
+#else
     sem_wait(&connection_semaphore);
+#endif
     if(ATOMIC_GET(is_running)==false)
       goto done;
     if(connect_meterbridge==1){
@@ -1982,11 +2014,19 @@ static void* connection_thread(void *arg){
 
 static void wake_up_connection_thread(void){
   if(use_manual_connections==false)
+#ifdef __APPLE__
+    semaphore_signal(connection_semaphore);
+#else
     sem_post(&connection_semaphore);
+#endif
 }
 
 static void start_connection_thread(void){
+#ifdef __APPLE__
+  semaphore_create(mach_task_self(), &connection_semaphore, SYNC_POLICY_FIFO, 0);
+#else
   sem_init(&connection_semaphore,0,0);
+#endif
   pthread_create(&connect_thread,NULL,connection_thread,NULL);
 }
 
@@ -2070,14 +2110,22 @@ static void create_ports(void){
 static void finish(int sig){
   (void)sig;
   //turn_on_echo(); //Don't think we can do this from a signal handler...
+#ifdef __APPLE__
+  semaphore_signal(stop_sem);
+#else
   sem_post(&stop_sem);
+#endif
 }
 
 static void jack_shutdown(void *arg){
   (void)arg;
   fprintf(stderr,"jack_capture: JACK shutdown.\n");
   jack_has_been_shut_down=true;
+#ifdef __APPLE__
+  semaphore_signal(stop_sem);
+#else
   sem_post(&stop_sem);
+#endif
 }
 
 
@@ -2134,7 +2182,11 @@ static void* keypress_func(void* arg){
 
   program_ended_with_return = true;
 
+#ifdef __APPLE__
+  semaphore_signal(stop_sem);
+#else
   sem_post(&stop_sem);
+#endif
   return NULL;
 }
 
@@ -2536,7 +2588,11 @@ void init_various(void){
   verbose_print("main() Init waiting.\n");
   // Init waiting.
   {
+#ifdef __APPLE__
+    semaphore_create(mach_task_self(), &stop_sem, SYNC_POLICY_FIFO, 0);
+#else
     sem_init(&stop_sem,0,0);
+#endif
     signal(SIGINT,finish);
     signal(SIGTERM,finish);
     if(no_stdin==false)
@@ -2627,8 +2683,15 @@ void wait_until_recording_finished(void){
   if(use_jack_freewheel==true)
     print_message("Waiting for Jack Freewheeling .\n");
   
+
+#ifdef __APPLE__
+  kern_return_t ret;
+  while((ret=semaphore_wait(stop_sem))!=KERN_SUCCESS)
+    print_message("Warning: semaphore_wait failed: %d",ret);
+#else
   while(sem_wait(&stop_sem)==-1)
     print_message("Warning: sem_wait failed: %s",strerror(errno));
+#endif
 
   turn_on_echo();
   if(helper_thread_running==1){
