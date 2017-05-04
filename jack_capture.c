@@ -2574,6 +2574,12 @@ void init_various(void){
     buffers_init();
   }
 
+  if (access(base_filename, F_OK)==0){
+    print_message("\n");
+    print_message("!!! Warning, Overwriting existing file %s !!!\n", base_filename);
+    print_message("\n");
+  }
+
   verbose_print("main() Open soundfile and setup disk callback.\n");
   // Open soundfile and start disk thread
   {
