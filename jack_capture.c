@@ -2799,8 +2799,8 @@ int main (int argc, char *argv[]){
   stop_recording_and_cleanup();
 
   if (timemachine_mode==true && program_ended_with_return==true){
-    execv (org_argv[0], (char *const *) org_argv);
-    print_message("Error: exec returned.\n");
+    execvp (org_argv[0], (char *const *) org_argv);
+    print_message("Error: exec returned: %s.\n", strerror(errno));
     exit(127);
   }
 
