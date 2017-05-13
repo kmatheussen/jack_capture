@@ -6,6 +6,9 @@ VERSION=0.9.71
 CC=gcc
 CPP=g++
 
+# Needed on OSX
+CFLAGS += -I/opt/local/include
+
 OPTIMIZE=-O3
 #OPTIMIZE=-O0 -g
 
@@ -39,7 +42,7 @@ check_dependencies:
 	which pkg-config
 	which $(CC)
 	which $(CPP)
-	$(CC) -E testsndfile.c >/dev/null
+	$(CC) $(CFLAGS) -E testsndfile.c >/dev/null
 	@echo "All seems good "
 	@echo
 
