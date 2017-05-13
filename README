@@ -1,6 +1,6 @@
 
-jack_capture V0.9.71
-Released 2013-06-16
+jack_capture V0.9.72
+Released 2017-05-04
 Kjetil S. Matheussen
 
 
@@ -223,6 +223,16 @@ Cesare Marilungo, Jaromír Mike¨, Dragan Noveski, Andras Simon, and Anders Vinjar
 
 CHANGES
 *******
+0.9.71 -> 0.9.72
+ * Print warning in case user overwrites existing file.
+ * Use execvp, not execv. Also print strerror() if execvp failed.
+ * Support OSX (Luciano Iammarino)
+ * Some tsan fixes
+ * replace static .wav suffix with correct soundfile_format (Sebastian Reimers)
+ * Silence unused parameter warnings from gcc 4.8
+ * Warn about unable to set SCHED_OTHER process using setpriority(), not a SCHED_FIFO process
+ * Compilation patches from debian
+
 0.7.70 -> 0.9.71
  * Dont limit mp3 files to stereo only
  * Flush mp3 files before closing

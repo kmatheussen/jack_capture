@@ -2574,6 +2574,12 @@ void init_various(void){
     buffers_init();
   }
 
+  if (access(base_filename, F_OK)==0){
+    print_message("\n");
+    print_message("!!! Warning, Overwriting existing file %s !!!\n", base_filename);
+    print_message("\n");
+  }
+
   verbose_print("main() Open soundfile and setup disk callback.\n");
   // Open soundfile and start disk thread
   {
@@ -2799,8 +2805,8 @@ int main (int argc, char *argv[]){
   stop_recording_and_cleanup();
 
   if (timemachine_mode==true && program_ended_with_return==true){
-    execv (org_argv[0], (char *const *) org_argv);
-    print_message("Error: exec returned: %s\n", strerror(errno));
+    execvp (org_argv[0], (char *const *) org_argv);
+    print_message("Error: exec returned: %s.\n", strerror(errno));
     exit(127);
   }
 
