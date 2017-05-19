@@ -2752,7 +2752,7 @@ void stop_recording_and_cleanup(void){
 }
 
 
-void append_argv(char **v1,char **v2,int len1,int len2,int max_size){
+void append_argv(char **v1,const char **v2,int len1,int len2,int max_size){
   int write_pos = len1;
   int read_pos  = 0;
 
@@ -2762,7 +2762,7 @@ void append_argv(char **v1,char **v2,int len1,int len2,int max_size){
   }
 
   while(write_pos<len1+len2)
-    v1[write_pos++] = v2[read_pos++];    
+    v1[write_pos++] = (char*)v2[read_pos++];    
 }
 
 
@@ -2791,7 +2791,7 @@ int main (int argc, char *argv[]){
   // get arguments both from command line and config file (config file is read first, so that command line can override)
   int c_argc;
   char **c_argv = read_config(&c_argc,500);
-  append_argv(c_argv,argv,c_argc,argc,500);
+  append_argv(c_argv,(const char**)argv,c_argc,argc,500);
   //print_argv(c_argv,c_argc+argc);
 
   init_arguments(c_argc+argc,c_argv);
