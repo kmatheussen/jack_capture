@@ -1,6 +1,6 @@
 
-jack_capture V0.9.72
-Released 2017-05-04
+jack_capture V0.9.73
+Released 2017-05-19
 Kjetil S. Matheussen
 
 
@@ -229,6 +229,11 @@ Cesare Marilungo, Jaromír Mike¨, Dragan Noveski, Andras Simon, and Anders Vinjar
 
 CHANGES
 *******
+0.9.72 -> 0.9.73
+* Update version to 0.9.73. (Version number was set to 0.9.71 in 0.9.72.)
+* Make it clearer that you risk overwriting an old file by specifying filename
+* OSX compilation fix (Julius Smith)
+
 0.9.71 -> 0.9.72
  * Print warning in case user overwrites existing file.
  * Use execvp, not execv. Also print strerror() if execvp failed.
