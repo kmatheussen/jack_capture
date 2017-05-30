@@ -1662,14 +1662,14 @@ static void process_fill_buffers(int jack_block_size){
 static bool jack_transport_started=false;
 static bool jack_freewheel_started=false;
 
-enum{
+enum ProcessState{
   NOT_STARTED,
   HANDLING_LATENCY,
   RECORDING,
   RECORDING_FINISHED
 };
 
-static int process_state=NOT_STARTED;
+static enum ProcessState process_state=NOT_STARTED;
 
 static int process(jack_nframes_t nframes, void *arg){
   (void)arg;
