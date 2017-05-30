@@ -31,19 +31,11 @@
 #include <unistd.h>
 #include <sndfile.h>
 #include <pthread.h>
-#ifdef __APPLE__
-#include <mach/mach.h>
-#else
-#include <semaphore.h>
-#endif
 #include <math.h>
 #include <stdarg.h>
 
 #include <termios.h>
 
-#ifndef __APPLE__
-#include <sys/sysinfo.h>
-#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -65,6 +57,10 @@
 int  init_osc(int osc_port);
 void shutdown_osc(void);
 #endif
+
+#include "jack_capture.h"
+
+#include "sema.h"
 
 #include "atomic.h"
 
@@ -184,7 +180,6 @@ static float *vu_vals=NULL;
 static int   *vu_times=NULL;
 static int *vu_peaks=NULL;
 static float *vu_peakvals=NULL;
-static void print_message(const char *fmt, ...);
 
 /* Synchronization between jack process thread and disk thread. */
 static DEFINE_ATOMIC(bool, is_initialized) = false; // This $@#$@#$ variable is needed because jack ports must be initialized _after_ (???) the client is activated. (stupid jack)
@@ -212,11 +207,7 @@ static pthread_t connect_thread={0} ;
 
 
 // das stop semaphore
-#ifdef __APPLE__
-static semaphore_t stop_sem;
-#else
-static sem_t stop_sem;
-#endif
+static SEM_TYPE_T stop_sem;
 
 
 
@@ -840,12 +831,26 @@ static void *helper_thread_func(void *arg){
 }
 
 
+enum ThreadType{
+  UNINITIALIZED_THREAD_TYPE,
+  OTHER_THREAD,
+  REALTIME_THREAD,
+  MAIN_THREAD
+};
+
+static __thread enum ThreadType g_thread_type = UNINITIALIZED_THREAD_TYPE;
+
 
 static pthread_mutex_t print_message_mutex = PTHREAD_MUTEX_INITIALIZER;  
-static void print_message(const char *fmt, ...){
+void print_message(const char *fmt, ...){  
   if (absolutely_silent==true) return;
-  
+
+  if (g_thread_type == REALTIME_THREAD)
+    // what?
+    return;
+    
   if(helper_thread_running==0 || write_to_stdout==true){
+    
     va_list argp;
     va_start(argp,fmt);
     fprintf(stderr,"%c[31m" MESSAGE_PREFIX,0x1b);   // set red color
@@ -853,6 +858,7 @@ static void print_message(const char *fmt, ...){
     fprintf(stderr,"%c[0m",0x1b); // reset colors
     fflush(stderr);
     va_end(argp);
+    
   }else{
 
     pthread_mutex_lock(&print_message_mutex);{
@@ -1071,11 +1077,7 @@ static int64_t overruns=0;
 
 #if HAVE_LIBLO
 bool queued_file_rotate=false;
-#ifdef __APPLE__
-void osc_stop() { semaphore_signal(stop_sem); }
-#else
-void osc_stop() { sem_post(&stop_sem); }
-#endif
+ void osc_stop() { SEM_SIGNAL(stop_sem); }
 void osc_tm_start() { timemachine_recording=true; }
 void osc_tm_stop() { program_ended_with_return=true; osc_stop(); }
 #endif
@@ -1674,17 +1676,23 @@ static enum ProcessState process_state=NOT_STARTED;
 static int process(jack_nframes_t nframes, void *arg){
   (void)arg;
 
-  jack_transport_state_t state=0;
+  if (g_thread_type == UNINITIALIZED_THREAD_TYPE)
+    g_thread_type = REALTIME_THREAD;
+  
+  jack_transport_state_t jack_transport_state=JackTransportStopped;
 
+  // jack_transport
   if(use_jack_transport==true){
-    state=jack_transport_query(client,NULL);
-    if(state==JackTransportRolling){
+    jack_transport_state=jack_transport_query(client,NULL);
+    if(jack_transport_state==JackTransportRolling){
       jack_transport_started=true;
     }
 
     if(jack_transport_started==false)
       return 0;
   }
+
+  // jack_freewheel
   if (use_jack_freewheel==true) {
     if (freewheel_mode > 0)
       jack_freewheel_started=true;
@@ -1729,28 +1737,25 @@ static int process(jack_nframes_t nframes, void *arg){
 
     if(ATOMIC_GET(num_frames_recorded)==num_frames_to_record){
       send_buffer_to_disk_thread(current_buffer);
-#ifdef __APPLE__
-      semaphore_signal(stop_sem);
-#else
-      sem_post(&stop_sem);
-#endif
+      SEM_SIGNAL(stop_sem);
       process_state=RECORDING_FINISHED;
     }
 
   }else{
+    
     process_fill_buffers(nframes);
+    
     ATOMIC_ADD(num_frames_recorded, nframes);
-    if(    (use_jack_transport==true && state==JackTransportStopped)
-	|| (use_jack_freewheel==true && freewheel_mode==0)
-      ){
-      send_buffer_to_disk_thread(current_buffer);
-#ifdef __APPLE__
-      semaphore_signal(stop_sem);
-#else
-      sem_post(&stop_sem);
-#endif
-      process_state=RECORDING_FINISHED;
-    }
+    
+    if((   use_jack_transport==true && jack_transport_state==JackTransportStopped)
+       || (use_jack_freewheel==true && freewheel_mode==0)
+       )
+      {
+        send_buffer_to_disk_thread(current_buffer);
+        SEM_SIGNAL(stop_sem);
+        process_state=RECORDING_FINISHED;
+      }
+    
   }
 
   vringbuffer_trigger_autoincrease_callback(vringbuffer);
@@ -2110,22 +2115,14 @@ static void create_ports(void){
 static void finish(int sig){
   (void)sig;
   //turn_on_echo(); //Don't think we can do this from a signal handler...
-#ifdef __APPLE__
-  semaphore_signal(stop_sem);
-#else
-  sem_post(&stop_sem);
-#endif
+  SEM_SIGNAL(stop_sem);
 }
 
 static void jack_shutdown(void *arg){
   (void)arg;
   fprintf(stderr,"jack_capture: JACK shutdown.\n");
   jack_has_been_shut_down=true;
-#ifdef __APPLE__
-  semaphore_signal(stop_sem);
-#else
-  sem_post(&stop_sem);
-#endif
+  SEM_SIGNAL(stop_sem);
 }
 
 
@@ -2182,11 +2179,7 @@ static void* keypress_func(void* arg){
 
   program_ended_with_return = true;
 
-#ifdef __APPLE__
-  semaphore_signal(stop_sem);
-#else
-  sem_post(&stop_sem);
-#endif
+  SEM_SIGNAL(stop_sem);
   return NULL;
 }
 
@@ -2599,13 +2592,11 @@ void init_various(void){
   verbose_print("main() Init waiting.\n");
   // Init waiting.
   {
-#ifdef __APPLE__
-    semaphore_create(mach_task_self(), &stop_sem, SYNC_POLICY_FIFO, 0);
-#else
-    sem_init(&stop_sem,0,0);
-#endif
+    SEM_INIT(stop_sem);
+    
     signal(SIGINT,finish);
     signal(SIGTERM,finish);
+    
     if(no_stdin==false)
       start_keypress_thread();
   }
@@ -2695,14 +2686,7 @@ void wait_until_recording_finished(void){
     print_message("Waiting for Jack Freewheeling .\n");
   
 
-#ifdef __APPLE__
-  kern_return_t ret;
-  while((ret=semaphore_wait(stop_sem))!=KERN_SUCCESS)
-    print_message("Warning: semaphore_wait failed: %d",ret);
-#else
-  while(sem_wait(&stop_sem)==-1)
-    print_message("Warning: sem_wait failed: %s",strerror(errno));
-#endif
+  SEM_WAIT(stop_sem);
 
   turn_on_echo();
   if(helper_thread_running==1){
@@ -2781,7 +2765,8 @@ void print_argv(char **argv,int argc){
 int main (int argc, char *argv[]){
   //get_free_mem();
   //mainpid=getpid();
-
+  g_thread_type = MAIN_THREAD;
+    
   char **org_argv = argv;
 
   // remove exe name from argument list.

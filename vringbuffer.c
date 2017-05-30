@@ -222,11 +222,7 @@ void vringbuffer_delete(vringbuffer_t* vrb){
 static void *autoincrease_func(void* arg){
   vringbuffer_t *vrb=arg;
   vrb->autoincrease_callback(vrb,true,0,0);
-#ifdef __APPLE__
-  semaphore_signal(vrb->autoincrease_started);
-#else
-  sem_post(&vrb->autoincrease_started);
-#endif
+  SEM_SIGNAL(vrb->autoincrease_started);
   while(vrb->please_stop==false){
     int reading_size = vringbuffer_reading_size(vrb);
     int writing_size = vringbuffer_writing_size(vrb);
@@ -249,24 +245,18 @@ void vringbuffer_trigger_autoincrease_callback(vringbuffer_t *vrb){
   upwaker_wake_up(vrb->autoincrease_trigger);
 }
 
-void    vringbuffer_set_autoincrease_callback  (vringbuffer_t *vrb, Vringbuffer_autoincrease_callback callback, useconds_t interval){
+void vringbuffer_set_autoincrease_callback  (vringbuffer_t *vrb, Vringbuffer_autoincrease_callback callback, useconds_t interval){
   vrb->autoincrease_callback = callback;
   vrb->autoincrease_interval = interval;
 
-#ifdef __APPLE__
-  semaphore_create(mach_task_self(), &vrb->autoincrease_started, SYNC_POLICY_FIFO, 0);
-#else
-  sem_init(&vrb->autoincrease_started,0,0);
-#endif
+  SEM_INIT(vrb->autoincrease_started);
+  
   pthread_create(&vrb->autoincrease_thread, NULL, autoincrease_func, vrb);
-#ifdef __APPLE__
-  semaphore_wait(vrb->autoincrease_started);
-#else
-  sem_wait(&vrb->autoincrease_started);
-#endif  
+
+  SEM_WAIT(vrb->autoincrease_started);
 }
 
-void	vringbuffer_increase		(vringbuffer_t *vrb, int num_elements, void **elements){
+void vringbuffer_increase(vringbuffer_t *vrb, int num_elements, void **elements){
   if(num_elements+vrb->curr_num_elements > vrb->max_num_elements)
     num_elements = vrb->max_num_elements - vrb->curr_num_elements;
 
@@ -300,11 +290,7 @@ int vringbuffer_reading_size    (vringbuffer_t *vrb){
 static void *receiver_func(void* arg){
   vringbuffer_t *vrb=arg;
   vrb->receiver_callback(vrb,true,NULL);
-#ifdef __APPLE__
-  semaphore_signal(vrb->receiver_started);
-#else
-  sem_post(&vrb->receiver_started);
-#endif
+  SEM_SIGNAL(vrb->receiver_started);
 
   void *buffer = NULL;
 
@@ -330,17 +316,11 @@ static void *receiver_func(void* arg){
 void vringbuffer_set_receiver_callback(vringbuffer_t *vrb,Vringbuffer_receiver_callback receiver_callback){
   vrb->receiver_callback=receiver_callback;
 
-#ifdef __APPLE__
-  semaphore_create(mach_task_self(), &vrb->receiver_started, SYNC_POLICY_FIFO, 0);
-#else
-  sem_init(&vrb->receiver_started,0,0);
-#endif
+  SEM_INIT(vrb->receiver_started);
+  
   pthread_create(&vrb->receiver_thread, NULL, receiver_func, vrb);
-#ifdef __APPLE__
-  semaphore_wait(vrb->receiver_started);
-#else
-  sem_wait(&vrb->receiver_started);
-#endif
+
+  SEM_INIT(vrb->receiver_started);
 }
 
 

@@ -1,20 +1,16 @@
 
 #include <stdbool.h>
-
 #include <unistd.h>
 
 #include <pthread.h>
 
-#ifdef __APPLE__
-#include <mach/mach.h>
-#else
-#include <semaphore.h>
-#endif
+#include <jack/ringbuffer.h>
+
 
 #include "upwaker.h"
+#include "sema.h"
 
 
-#include <jack/ringbuffer.h>
 
 enum vringbuffer_receiver_callback_return_t {
   VRB_CALLBACK_DIDNT_USE_BUFFER,
@@ -49,21 +45,13 @@ typedef struct vringbuffer_t{
   // Receiver callback
   pthread_t receiver_thread;
   upwaker_t *receiver_trigger;
-#ifdef __APPLE__
-  semaphore_t receiver_started;
-#else
-  sem_t receiver_started;
-#endif
+  SEM_TYPE_T receiver_started;
   Vringbuffer_receiver_callback receiver_callback;
 
   // Autoincrease callback
   pthread_t autoincrease_thread;
   upwaker_t *autoincrease_trigger;
-#ifdef __APPLE__
-  semaphore_t autoincrease_started;
-#else
-  sem_t autoincrease_started;
-#endif
+  SEM_TYPE_T autoincrease_started;
   Vringbuffer_autoincrease_callback autoincrease_callback;
   useconds_t autoincrease_interval;
 }vringbuffer_t;
