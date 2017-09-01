@@ -164,6 +164,7 @@ static int total_overruns=0;
 static int total_xruns=0;
 
 static volatile int freewheel_mode=0;
+static char *jackname="jack_capture";
 
 
 /* Disk thread */
@@ -2145,7 +2146,7 @@ static void start_jack(void){
   if(I_am_already_called) // start_jack is called more than once if the --port argument has been used.
     return;
 
-  client=new_jack_client("jack_capture");
+  client=new_jack_client(jackname);
 
   jack_samplerate=jack_get_sample_rate(client);
   block_size=jack_get_buffer_size(client);
@@ -2244,6 +2245,7 @@ static const char *advanced_help =
   "                                    (not implemented yet)\n"
   "[--jack-freewheeling]/[-jf]      -> Start program, but do not start recording until jack enters freewheeling mode\n"
   "                                    When jack leaves freewheeling, the recording is also stopped, and the program ends.\n"
+  "[--jack-name]/[-jn]              -> Set name of this jack_capture instance in the jack patchbay.\n"
   "[--manual-connections]/[-mc]     -> jack_capture will not connect any ports for you. \n"
   "[--bufsize s] or [-B s]          -> Initial/minimum buffer size in seconds. Default is 8 seconds\n"
   "                                    for mp3 files, and 4 seconds for all other formats.\n" 
@@ -2409,6 +2411,7 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--rotatefile","-Rf") rotateframe = OPTARG_GETINT();
       OPTARG("--timemachine","-tm") timemachine_mode = true;
       OPTARG("--timemachine-prebuffer","-tmpb") timemachine_prebuffer=OPTARG_GETFLOAT();
+	  OPTARG("--jack-name","-jn") jackname=OPTARG_GETSTRING();
       OPTARG_LAST() base_filename=OPTARG_GETSTRING();
     }OPTARGS_END;
 
