@@ -165,7 +165,7 @@ static int total_overruns=0;
 static int total_xruns=0;
 
 static volatile int freewheel_mode=0;
-static char *jackname="jack_capture";
+static char *jackname="jack_capture"; // limited to 33 characters
 
 
 /* Disk thread */
