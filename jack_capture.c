@@ -84,6 +84,7 @@ void shutdown_osc(void);
 //#define OPTARG_GETINT() OPTARGS_CHECK_GET(0,(optargs_inttemp=strtol(argv[++lokke],(char**)NULL,10),errno!=0?(perror("strtol"),0):optargs_inttemp))
 #define OPTARG_GETFLOAT() OPTARGS_CHECK_GET(0.0f,atof(argv[++lokke]))
 #define OPTARG_GETSTRING() OPTARGS_CHECK_GET("",argv[++lokke])
+#define OPTARG_GETBOOL() ({const char *response = OPTARG_GETSTRING(); !strcasecmp(response,"false") ? false : !strcasecmp(response,"true") ? true : (fprintf(stderr,"Argument for '%s' must be \"false\" or \"true\"\n",argv[lokke-1]), exit(-5) , false);})
 #define OPTARG_LAST() }}else if(lokke==argc-1 && argv[lokke][0]!='-'){lokke--;{
 #define OPTARGS_ELSE() }else if(1){
 #define OPTARGS_END }else{fprintf(stderr,"%s",usage);exit(-1);}}}
