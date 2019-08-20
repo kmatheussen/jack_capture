@@ -69,8 +69,6 @@ Other features:
   local hard drive. (tested on icore7)
 
 
-
-
 COMMON USAGE 
 ************
 $ jack_capture
@@ -201,6 +199,18 @@ To record all sound coming in and out of jamin:
 To record a stereo file from the soundcard:
   $jack_capture -c 2 -p system:capture*
 
+
+
+
+BUILD
+*****
+make
+
+
+
+INSTALL
+*******
+PREFIX=/usr/local make install
 
 
 
