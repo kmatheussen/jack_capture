@@ -3,7 +3,12 @@ jack_capture V0.9.73
 Released 2017-05-19
 Kjetil S. Matheussen
 
-
+INSTALL
+*****
+`cd /usr/local` (optional)
+`git clone https://github.com/kmatheussen/jack_capture.git`
+`cd jack_capture`
+`sudo make install`
 
 ABOUT
 *****
@@ -219,12 +224,12 @@ Code for writing to stdout was made by looking at http://mir.dnsalias.com/oss/ja
 made by Robin Gareus.
 
 Code contributions from:
-Florian Faber, Robin Gareus, Adrian Knoth, Filipe Lopes, Svend-Erik Kjær Madsen (made jack_capture_gui),
+Florian Faber, Robin Gareus, Adrian Knoth, Filipe Lopes, Svend-Erik KjÃ¦r Madsen (made jack_capture_gui),
 Hermann Meyer (made jack_capture_gui2), Dan Muresan, Orcan Ogetbil, and Alessio Treglia.
 
 Thanks to the following for helping to fix bugs, report bugs, give suggestions, etc.:
 Fons Adriaensen, Gabriel J.L. Beckers, Julien Claassen, Dominique Fober, Peder Hedlund,
-Cesare Marilungo, Jaromír Mike¨, Dragan Noveski, Andras Simon, and Anders Vinjar.
+Cesare Marilungo, JaromÃ­r MikeÂ¨, Dragan Noveski, Andras Simon, and Anders Vinjar.
 
 
 CHANGES
@@ -644,7 +649,7 @@ CHANGES
   lead to race conditions when recording too many channels
   (256 channels on my machine).
  *Added the jack_capture_gui script, based on code
-  by Svend-Erik Kjær Madsen.
+  by Svend-Erik KjÃ¦r Madsen.
 
 
 0.9.15 -> 0.9.16:
