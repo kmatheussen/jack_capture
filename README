@@ -89,6 +89,7 @@ jack_capture  [--bitdepth n] [--channels n] [--port port] [filename]
            By not using this option, you will not overwrite an old file.
            See also the option --filename-prefix
            If the filename has a valid file extension then this will be used to format the output file.
+           So that "jack_capture output.ogg" will produce an ogg file, unless a format argument is provided.
 
 
 Additional arguments:
@@ -101,7 +102,7 @@ Additional arguments:
                                     (-z 2 -> jack_capture_001.wav, and so on.) (default is 1)
 [--format format] or [-f format] -> Selects fileformat provided by libsndfile.
                                     See http://www.mega-nerd.com/libsndfile/api.html#open
-                                    This option will overwrite any format specified in the output filename.
+                                    This option will overwrite any format specified by the output filename.
                                     (Default is wav for 1 or 2 channels, and wavex for more than 2.)
 [--print-formats] or [-pf]       -> Prints all sound formats provided to sndfile to screen and then
                                     exits.
@@ -111,6 +112,7 @@ Additional arguments:
                                     Warning: libraries used by jack_capture may still print messages.
 [--verbose] or [-V]              -> Prints some extra information to the terminal.
 [--mp3] or [-mp3]                -> Writes to an mp3 file using liblame (LAME).
+                                    This option will overwrite any format specified by the output filename.
                                     (the --format option has no effect using this option)
 [--mp3-quality n] or [-mp3q n]   -> Selects mp3 quality provided by liblame. n=0 is best, n=9 is worst.
                                     Default n is 2. (0 uses the most amount of CPU, 9 uses the least)
