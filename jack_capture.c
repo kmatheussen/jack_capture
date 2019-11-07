@@ -2460,8 +2460,9 @@ void init_arguments(int argc, char *argv[]){
       // handle mp3
       if(strcmp(soundfile_format, "mp3") == 0) {
 #if HAVE_LAME
-        write_to_mp3 = true;
-        if(min_buffer_time == DEFAULT_MIN_BUFFER_TIME) // this was set before we knew it was mp3 format
+        write_to_mp3 = true; 
+        // the min_buffer_time may have been set before we knew it was mp3 format
+        if(min_buffer_time<=0.0f || min_buffer_time == DEFAULT_MIN_BUFFER_TIME)
           min_buffer_time = DEFAULT_MIN_MP3_BUFFER_TIME;
 #else
         fprintf(stderr,"mp3 not supported. liblame was not installed when compiling jack_capture\n");
