@@ -2206,6 +2206,7 @@ static const char *advanced_help =
   "           Beware that you might risk overwriting an old file by using this option.\n"
   "           By not using this option, you will not overwrite an old file.\n"
   "           See also the option --filename-prefix\n"
+  "           If the filename has a valid file extension then this will be used to format the output file.\n" 
   "\n"
   "\n"
   "Additional arguments:\n"
@@ -2218,6 +2219,7 @@ static const char *advanced_help =
   "                                    (-z 2 -> jack_capture_001.wav, and so on.) (default is 1)\n"
   "[--format format] or [-f format]  -> Selects fileformat provided by libsndfile.\n"
   "                                     See http://www.mega-nerd.com/libsndfile/api.html#open\n"
+  "                                     This option will overwrite any format specified in the output filename.\n"
   "                                     (Default is wav for 1 or 2 channels, and wavex for more than 2.)\n"
   "[--print-formats] or [-pf]        -> Prints all sound formats provided to sndfile to screen and then\n"
   "                                     exits.\n"
@@ -2297,6 +2299,9 @@ static const char *advanced_help =
   "\n"
   "To record a stereo file of what you hear in the mp3 format:\n"
   " $jack_capture -mp3\n"
+  "\n"
+  "To record a named stereo file of what you hear in the ogg format:\n"
+  " $jack_capture output.ogg\n"
   "\n"
   "To record a stereo file of what you hear in the wav format:\n"
   "  $jack_capture --port system:playback_1 --port system:playback_2\n"
@@ -2441,6 +2446,29 @@ void init_arguments(int argc, char *argv[]){
   }else{
     if(min_buffer_time<=0.0f)
       min_buffer_time = DEFAULT_MIN_BUFFER_TIME;
+  }
+
+  verbose_print("main() determine file format from filename\n");
+  // If no format specified try to determine format from the base_filename
+  if(!soundfile_format_is_set && base_filename) {
+    char *ext = strrchr(base_filename, '.');
+    if(ext) {
+      ext++; // skip leading .
+      soundfile_format = ext;
+      soundfile_format_is_set = true;
+
+      // handle mp3
+      if(strcmp(soundfile_format, "mp3") == 0) {
+#if HAVE_LAME
+        write_to_mp3 = true;
+        if(min_buffer_time == DEFAULT_MIN_BUFFER_TIME) // this was set before we knew it was mp3 format
+          min_buffer_time = DEFAULT_MIN_MP3_BUFFER_TIME;
+#else
+        fprintf(stderr,"mp3 not supported. liblame was not installed when compiling jack_capture\n");
+        exit(2);
+#endif
+      }
+    }
   }
 
   if(timemachine_mode==true) {
