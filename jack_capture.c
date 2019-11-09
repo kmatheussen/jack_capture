@@ -1192,10 +1192,10 @@ static int open_soundfile(void){
   {
     int format=getformat(soundfile_format);
     if(format==-1 && num_channels>2){
-      fprintf(stderr,"Warning, the format \"%s\" is not supported. Using %s instead.\n",soundfile_format_multi,soundfile_format);
+      fprintf(stderr,"Warning, the format \"%s\" is not supported. Using \"%s\" instead.\n", soundfile_format, soundfile_format_multi);
       sf_info.format=MORE_THAN_TWO_CHANNELS_FORMAT;
     }else if(format==-1){
-      fprintf(stderr,"Warning, the format \"%s\" is not supported. Using %s instead.\n",soundfile_format_one_or_two,soundfile_format);
+      fprintf(stderr,"Warning, the format \"%s\" is not supported. Using \"%s\" instead.\n", soundfile_format, soundfile_format_one_or_two);
       sf_info.format=ONE_OR_TWO_CHANNELS_FORMAT;
     }else
       sf_info.format=format;
