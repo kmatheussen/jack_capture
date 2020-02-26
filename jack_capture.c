@@ -1,7 +1,7 @@
 
 /*
   Kjetil Matheussen, 2005-2013.
-    
+
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation; either version 2 of the License, or
@@ -256,7 +256,7 @@ static bool set_high_priority(void){
 
   while(prio<0 && setpriority(PRIO_PROCESS,0,prio)==-1)
     prio++;
-  
+
   if(prio==0 && shown_warning==false){
     print_message("Warning. Could not set higher priority for a SCHED_OTHER process using setpriority().\n");
     shown_warning=true; }
@@ -374,7 +374,7 @@ static void buffers_init(){
   vringbuffer = vringbuffer_create(JC_MAX(4,seconds_to_buffers(min_buffer_time)),
                                    JC_MAX(4,seconds_to_buffers(max_buffer_time)),
                                    buffer_size_in_bytes);
-                                   
+
   if(vringbuffer==NULL){
     fprintf(stderr,"Unable to allocate memory for buffers\n");
     exit(-1);
@@ -475,13 +475,13 @@ static void portnames_add(char *name){
     int ch;
 
     cportnames=realloc(cportnames,(num_cportnames+add_ch)*sizeof(char*));
-    
+
     for(ch=0;ch<add_ch;ch++){
       cportnames[num_cportnames]=new_outportnames[ch];
       //fprintf(stderr,"ch: %d, num_ch: %d, new_outportnames[ch]: %s, %s\n",ch,num_cportnames,new_outportnames[ch],new_outportnames[ch+1]);
       num_cportnames++;
     }
-    
+
   }else{
     fprintf(stderr,"\nWarning, no port(s) with name \"%s\".\n",name);
     if(cportnames==NULL)
@@ -492,10 +492,10 @@ static void portnames_add(char *name){
 
 static const char **portnames_get_connections(int ch, bool *using_calloc){
   *using_calloc = true; // silence compiler warning. (fix: logic of program is too complicated)
-  
+
   if(ch>=num_cportnames)
     return NULL;
-  else{      
+  else{
     jack_port_t  *port = jack_port_by_name(client,cportnames[ch]);
     const char  **ret;
 
@@ -512,7 +512,7 @@ static const char **portnames_get_connections(int ch, bool *using_calloc){
       ret[0] = cportnames[ch];
       *using_calloc = true;
     }
-    
+
     return ret;
   }
 }
@@ -532,7 +532,7 @@ static const char **portnames_get_connections(int ch, bool *using_calloc){
 // Function iec_scale picked from meterbridge by Steve Harris.
 static int iec_scale(float db) {
          float def = 0.0f; /* Meter deflection %age */
- 
+
          if (db < -70.0f) {
                  def = 0.0f;
          } else if (db < -60.0f) {
@@ -550,7 +550,7 @@ static int iec_scale(float db) {
          } else {
                  def = 100.0f;
          }
- 
+
          return (int)(def * 2.0f);
 }
 
@@ -569,7 +569,7 @@ static void print_console_top(void){
     char c='"';
     // Set cyan color
     printf("%c[36m",0x1b);
-    
+
     //printf("****");
     printf("   |");
     for(lokke=0;lokke<vu_len;lokke++)
@@ -637,12 +637,12 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
       float val   = vu_vals[ch];
       int   pos;
       vu_vals[ch] = -1.0f;
-      
+
       if(vu_dB)
         pos = iec_scale(20.0f * log10f(val * vu_bias)) * (vu_len) / 200;
       else
         pos = val*(vu_len);
-      
+
       if (pos > vu_peaks[ch]) {
         vu_peaks[ch]    = pos;
         vu_peakvals[ch] = val;
@@ -651,7 +651,7 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
         vu_peaks[ch]    = pos;
         vu_peakvals[ch] = val;
       }
-      
+
       if(ch>9){
         vol[0] = '0'+ch/10;
         vol[1] = '0'+ch-(10*(ch/10));
@@ -659,7 +659,7 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
         vol[0] = '0';
         vol[1] = '0'+ch;
       }
-      
+
       if (timemachine_mode==true && timemachine_recording==false) {
 
         for(i=0;i<pos && val>0.0f;i++)
@@ -737,7 +737,7 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
            //fmaxf(0.0f,buflen-bufleft),buflen,
            0x1b, // green color
            buffer_string,
-           recorded_minutes, recorded_seconds%60<10?"0":"", recorded_seconds%60, recorded_minutes<10?" ":"", 
+           recorded_minutes, recorded_seconds%60<10?"0":"", recorded_seconds%60, recorded_minutes<10?" ":"",
            disk_thread_has_high_priority?'x':' ',
            total_overruns,
            total_xruns,
@@ -802,7 +802,7 @@ static void *helper_thread_func(void *arg){
           msleep(5);
 	}
       }
-      printf(MESSAGE_PREFIX); 
+      printf(MESSAGE_PREFIX);
       printf("%s",message_string);
       message_string[0]=0;
       move_cursor_to_top_doit=false;
@@ -844,16 +844,16 @@ enum ThreadType{
 static __thread enum ThreadType g_thread_type = UNINITIALIZED_THREAD_TYPE;
 
 
-static pthread_mutex_t print_message_mutex = PTHREAD_MUTEX_INITIALIZER;  
-void print_message(const char *fmt, ...){  
+static pthread_mutex_t print_message_mutex = PTHREAD_MUTEX_INITIALIZER;
+void print_message(const char *fmt, ...){
   if (absolutely_silent==true) return;
 
   if (g_thread_type == REALTIME_THREAD)
     // what?
     return;
-    
+
   if(helper_thread_running==0 || write_to_stdout==true){
-    
+
     va_list argp;
     va_start(argp,fmt);
     fprintf(stderr,"%c[31m" MESSAGE_PREFIX,0x1b);   // set red color
@@ -861,14 +861,14 @@ void print_message(const char *fmt, ...){
     fprintf(stderr,"%c[0m",0x1b); // reset colors
     fflush(stderr);
     va_end(argp);
-    
+
   }else{
 
     pthread_mutex_lock(&print_message_mutex);{
 
       while(message_string[0]!=0)
         msleep(2);
-    
+
       va_list argp;
       va_start(argp,fmt);
       vsprintf(message_string,fmt,argp);
@@ -899,7 +899,7 @@ static void stop_helper_thread(void){
   /*
   if(use_vu||show_bufferusage){
     printf("%c[0m",0x1b); // reset colors
-    usleep(1000000/2); // wait for terminal    
+    usleep(1000000/2); // wait for terminal
   }
   */
 }
@@ -1119,7 +1119,7 @@ static int open_mp3file(void){
   } else {
 	  lame_set_out_samplerate(lame,(int)das_lame_samplerate);
   }
-  
+
   lame_set_quality(lame,das_lame_quality);
 
   if(das_lame_bitrate!=-1){
@@ -1188,7 +1188,7 @@ static int open_soundfile(void){
 
   sf_info.samplerate = jack_samplerate;
   sf_info.channels   = num_channels;
-  
+
   {
     int format=getformat(soundfile_format);
     if(format==-1 && num_channels>2){
@@ -1217,7 +1217,7 @@ static int open_soundfile(void){
       bitdepth=24;
       subformat=SF_FORMAT_PCM_24;
 #if HAVE_OGG
-    }else if(!strcasecmp("ogg",soundfile_format)){      
+    }else if(!strcasecmp("ogg",soundfile_format)){
       subformat = SF_FORMAT_VORBIS;
 #endif
     }else{
@@ -1230,7 +1230,7 @@ static int open_soundfile(void){
   bytes_per_frame=bitdepth/8;
 
   sf_info.format |= subformat;
-  
+
   if(sf_format_check(&sf_info)==0){
     fprintf (stderr, "\nFileformat not supported by libsndfile. Try other options.\n");
     return 0;
@@ -1430,7 +1430,7 @@ static int disk_write(void *data,size_t frames){
 
   if(!handle_filelimit(frames))
     return 0;
-  
+
   if((size_t)sf_writef_float(soundfile,data,frames) != frames){
     print_message("Error. Can not write sndfile (%s)\n",
 		sf_strerror(soundfile)
@@ -1514,9 +1514,9 @@ static enum vringbuffer_receiver_callback_return_t disk_callback(vringbuffer_t *
 
   disk_thread_control_priority();
 
-  
+
   if (ATOMIC_COMPARE_AND_SET_INT(g_store_sync, 1, 2)) {
-    
+
     hook_rec_timimg(filename, rtime, j_latency);
 
     if (create_tme_file) { /* write .tme info-file */
@@ -1539,7 +1539,7 @@ static enum vringbuffer_receiver_callback_return_t disk_callback(vringbuffer_t *
       /* ok, write to file */
       FILE *file = fopen(string_concat(filename, ".tme"),"w");
       if(file) {
-	fprintf(file, "%ld.%ld\n", rtime.tv_sec, rtime.tv_nsec); 
+	fprintf(file, "%ld.%ld\n", rtime.tv_sec, rtime.tv_nsec);
 	fprintf(file, "# port-latency: %d frames\n", j_latency);
 	fprintf(file, "# sample-rate : %f samples/sec\n", jack_samplerate);
 
@@ -1566,9 +1566,9 @@ static void cleanup_disk(void){
   // Adding silence at the end. Not much point.
   if(unreported_overruns>0)
     disk_write_overruns(unreported_overruns);
-  
+
   close_soundfile();
-  
+
   if(verbose==true)
     fprintf(stderr,"disk thread finished\n");
 }
@@ -1579,7 +1579,7 @@ static void cleanup_disk(void){
 
 /////////////////////////////////////////////////////////////////////
 //////////////////////// JACK PROCESS ///////////////////////////////
-/////////////////////////////////////////////////////////////////////	
+/////////////////////////////////////////////////////////////////////
 
 
 static void send_buffer_to_disk_thread(buffer_t *buffer){
@@ -1644,10 +1644,10 @@ static void process_fill_buffers(int jack_block_size){
   int i=0,ch;
 
   jack_port_t **ports = ATOMIC_GET(g_ports);
-  
+
   for(ch=0;ch<num_channels;ch++)
     in[ch]=jack_port_get_buffer(ports[ch],jack_block_size);
-      
+
   if(current_buffer==NULL && process_new_current_buffer(jack_block_size)==false)
     return;
 
@@ -1686,7 +1686,7 @@ static int process(jack_nframes_t nframes, void *arg){
 
   if (g_thread_type == UNINITIALIZED_THREAD_TYPE)
     g_thread_type = REALTIME_THREAD;
-  
+
   jack_transport_state_t jack_transport_state=JackTransportStopped;
 
   // jack_transport
@@ -1719,7 +1719,7 @@ static int process(jack_nframes_t nframes, void *arg){
     return 0;
 
   jack_port_t **ports = ATOMIC_GET(g_ports);
-  
+
   if (ATOMIC_GET(g_store_sync)==0) {
 #ifndef NEW_JACK_LATENCY_API
     int ch;
@@ -1735,7 +1735,7 @@ static int process(jack_nframes_t nframes, void *arg){
 
   if(fixed_duration==true){     // User has specified a duration
     int num_frames;
-    
+
     num_frames=JC_MIN(nframes,num_frames_to_record - ATOMIC_GET(num_frames_recorded));
 
     if(num_frames>0)
@@ -1750,11 +1750,11 @@ static int process(jack_nframes_t nframes, void *arg){
     }
 
   }else{
-    
+
     process_fill_buffers(nframes);
-    
+
     ATOMIC_ADD(num_frames_recorded, nframes);
-    
+
     if((   use_jack_transport==true && jack_transport_state==JackTransportStopped)
        || (use_jack_freewheel==true && freewheel_mode==0)
        )
@@ -1763,7 +1763,7 @@ static int process(jack_nframes_t nframes, void *arg){
         SEM_SIGNAL(stop_sem);
         process_state=RECORDING_FINISHED;
       }
-    
+
   }
 
   vringbuffer_trigger_autoincrease_callback(vringbuffer);
@@ -1793,7 +1793,7 @@ static void start_meterbridge(int num_channels){
 
   sprintf(meterbridge_jackname,"%s_meterbridge",jack_get_client_name(client));
   //meterbridge -t vu -n meterbri xmms-jack_12250_000:out_0 xmms-jack_12250_000:out_1
-  
+
   meterbridge_pid=fork();
   if(meterbridge_pid==0){
     char *argv[100+num_channels];
@@ -1812,15 +1812,15 @@ static void start_meterbridge(int num_channels){
       argv[7+ch]=NULL;
     }
 
-    
+
     if(1){ // Same as adding ">/dev/null 2>/dev/null" in a shell
       int fd;
       if((fd = open("/dev/null", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR))==-1){
 	perror("open");
-      }else{    
+      }else{
 	dup2(fd,STDOUT_FILENO);
 	dup2(fd,STDERR_FILENO);
-	close(fd); 
+	close(fd);
       }
     }
 
@@ -1850,7 +1850,7 @@ static int init_meterbridge_ports(){
     }
 
     {
-      jack_port_t **ports_meterbridge2 = (jack_port_t **) my_calloc (sizeof (jack_port_t *),num_channels);  
+      jack_port_t **ports_meterbridge2 = (jack_port_t **) my_calloc (sizeof (jack_port_t *),num_channels);
 
       ports_meterbridge2[0]=port1;
       {
@@ -1899,7 +1899,7 @@ static int reconnect_ports_questionmark(void){
   int ch;
 
   jack_port_t **ports = ATOMIC_GET(g_ports);
-  
+
   for(ch=0;ch<num_channels;ch++){
     bool using_calloc;
     const char **connections1 = portnames_get_connections(ch, &using_calloc);
@@ -1910,7 +1910,7 @@ static int reconnect_ports_questionmark(void){
 
     if(memb1==0 && memb2==0)
       continue;
-      
+
     if(memb1!=memb2){
       free_jack_connections(using_calloc, connections1);
       free_jack_connections(false, connections2);
@@ -1919,7 +1919,7 @@ static int reconnect_ports_questionmark(void){
 
     qsort(connections1,memb1,sizeof(char*),compare);
     qsort(connections2,memb2,sizeof(char*),compare);
-    
+
     {
       int lokke = 0;
       for(lokke=0;lokke<memb1;lokke++){
@@ -1953,7 +1953,7 @@ static void disconnect_ports(jack_port_t** ports){
     if(connections)
       for(;connections[lokke]!=NULL;lokke++)
         jack_disconnect(client,connections[lokke],jack_port_name(ports[ch]));
-    
+
     free_jack_connections(false, connections);
   }
 }
@@ -1975,7 +1975,7 @@ static void connect_ports(jack_port_t** ports){
       int err=jack_connect(client,connections[lokke],jack_port_name(ports[ch]));
       if(err!=0)
 	print_message("\nCould not connect input port %s to %s, errorcode %s\n",
-                      jack_port_name (ports[ch]), connections[lokke],strerror(err));      
+                      jack_port_name (ports[ch]), connections[lokke],strerror(err));
       lokke++;
     }
     free_jack_connections(using_calloc, connections);
@@ -2010,7 +2010,7 @@ static void* connection_thread(void *arg){
 	print_message("Reconnecting ports.\n");
 
       jack_port_t **ports = ATOMIC_GET(g_ports);
-        
+
       disconnect_ports(ports);
       connect_ports(ports);
 
@@ -2075,13 +2075,13 @@ static void jack_latency_cb(jack_latency_callback_mode_t mode, void *arg) {
   int ch;
   jack_latency_range_t jlty;
   jack_nframes_t max_latency = 0;
-  
+
   if (mode != JackCaptureLatency) return;
 
   jack_port_t **ports = ATOMIC_GET(g_ports);
-  
+
   if (!ports) return;
-  
+
   for(ch=0;ch<num_channels;ch++) {
     if(ports[ch]==0) continue;
     jack_port_get_latency_range(ports[ch], JackCaptureLatency, &jlty);
@@ -2092,7 +2092,7 @@ static void jack_latency_cb(jack_latency_callback_mode_t mode, void *arg) {
 #endif
 
 static void create_ports(void){
-  jack_port_t** ports = my_calloc (sizeof (jack_port_t *),num_channels);  
+  jack_port_t** ports = my_calloc (sizeof (jack_port_t *),num_channels);
   {
     int ch;
     for(ch=0;ch<num_channels;ch++) {
@@ -2195,7 +2195,7 @@ static void start_keypress_thread(void){
   pthread_create(&keypress_thread, NULL, keypress_func, NULL);
 }
 
-static const char *advanced_help = 
+static const char *advanced_help =
   "jack_capture  [--bitdepth n] [--channels n] [--port port] [filename]\n"
   "              [ -b        n] [ -c        n] [ -p    port]\n"
   "\n"
@@ -2207,7 +2207,7 @@ static const char *advanced_help =
   "           Beware that you might risk overwriting an old file by using this option.\n"
   "           By not using this option, you will not overwrite an old file.\n"
   "           See also the option --filename-prefix\n"
-  "           If the filename has a valid file extension then this will be used to format the output file.\n" 
+  "           If the filename has a valid file extension then this will be used to format the output file.\n"
   "           So that \"jack_capture ouput.ogg\" will produce an ogg file, unless a format argument is provided.\n"
   "\n"
   "\n"
@@ -2260,7 +2260,7 @@ static const char *advanced_help =
   "[--jack-name]/[-jn]               -> Set name of this jack_capture instance in the jack patchbay.\n"
   "[--manual-connections]/[-mc]      -> jack_capture will not connect any ports for you. \n"
   "[--bufsize s] or [-B s]           -> Initial/minimum buffer size in seconds. Default is 8 seconds\n"
-  "                                     for mp3 files, and 4 seconds for all other formats.\n" 
+  "                                     for mp3 files, and 4 seconds for all other formats.\n"
   "[--maxbufsize] or [-MB]           -> Maximum buffer size in seconds jack_capture will allocate.\n"
   "                                     Default is 40. (Buffer is automatically increased during\n"
   "                                     recording when needed. But it will never go beyond this size.)\n"
@@ -2328,7 +2328,7 @@ static const char *advanced_help =
   "  $jack_capture -c 2 -p system:capture*\n"
   "\n";
 
-static const char *osc_help = 
+static const char *osc_help =
   "If called with -O <udp-port-number>, jack-capture can be remote-controlled.\n"
 	"The following OSC (Open Sound Control) messages are understood:\n"
   "\n"
@@ -2463,7 +2463,7 @@ void init_arguments(int argc, char *argv[]){
       // handle mp3
       if(strcmp(soundfile_format, "mp3") == 0) {
 #if HAVE_LAME
-        write_to_mp3 = true; 
+        write_to_mp3 = true;
         // the min_buffer_time may have been set before we knew it was mp3 format
         if(min_buffer_time<=0.0f || min_buffer_time == DEFAULT_MIN_BUFFER_TIME)
           min_buffer_time = DEFAULT_MIN_MP3_BUFFER_TIME;
@@ -2488,7 +2488,7 @@ void init_arguments(int argc, char *argv[]){
       soundfile_format=soundfile_format_one_or_two;
   }
 
-  
+
   verbose_print("main() find filename\n");
   // Find filename
   {
@@ -2501,7 +2501,7 @@ void init_arguments(int argc, char *argv[]){
       }
     }
   }
-  
+
 }
 
 
@@ -2587,12 +2587,12 @@ char **read_config(int *argc,int max_size){
           value = string_concat(getenv("HOME"),&value[1]);
 
         argv[*argc] = value;
-        *argc       = *argc + 1;    
+        *argc       = *argc + 1;
         //printf("pos: %d -%s- -%s-\n",split_pos,name,value);
       }
     }else{
       argv[*argc] = string_concat("--",line);
-      *argc       = *argc + 1;   
+      *argc       = *argc + 1;
     }
   }
 
@@ -2628,7 +2628,7 @@ void init_various(void){
       jack_client_close(client);
       exit(-2);
     }
-    
+
     vringbuffer_set_receiver_callback(vringbuffer,disk_callback);
   }
 
@@ -2636,10 +2636,10 @@ void init_various(void){
   // Init waiting.
   {
     SEM_INIT(stop_sem);
-    
+
     signal(SIGINT,finish);
     signal(SIGTERM,finish);
-    
+
     if(no_stdin==false)
       start_keypress_thread();
   }
@@ -2696,7 +2696,7 @@ void init_various(void){
                     "Recording to \"%s\". The recording is going\n"
                     MESSAGE_PREFIX "to last %lf seconds Press <Ctrl-C> to stop before that.\n",
                     base_filename,
-                    recording_time);  
+                    recording_time);
     }else{
       if(silent==false) {
         if (timemachine_mode==true) {
@@ -2704,7 +2704,7 @@ void init_various(void){
           print_message("Press <Ctrl-C> to stop recording and quit.\n");
         }else
           print_message("Recording to \"%s\". Press <Return> or <Ctrl-C> to stop.\n",base_filename);
-        //fprintf(stderr,"Recording to \"%s\". Press <Return> or <Ctrl-C> to stop.\n",base_filename);        
+        //fprintf(stderr,"Recording to \"%s\". Press <Return> or <Ctrl-C> to stop.\n",base_filename);
       }
     }
   }
@@ -2727,7 +2727,7 @@ void wait_until_recording_finished(void){
     print_message("Waiting for JackTransportRolling.\n");
   if(use_jack_freewheel==true)
     print_message("Waiting for Jack Freewheeling .\n");
-  
+
 
   SEM_WAIT(stop_sem);
 
@@ -2749,17 +2749,17 @@ void stop_recording_and_cleanup(void){
   verbose_print("main() Stop recording and clean up.\n");
 
   ATOMIC_SET(is_running, false);
-  
+
   if(use_manual_connections==false)
     stop_connection_thread();
 
   vringbuffer_stop_callbacks(vringbuffer); // Called before cleanup_disk to make sure all data are sent to the callback.
-  
+
   cleanup_disk();
-  
+
   if(use_meterbridge)
     kill(meterbridge_pid,SIGINT);
-  
+
   stop_helper_thread();
 
 #if HAVE_LIBLO
@@ -2789,7 +2789,7 @@ void append_argv(char **v1,const char **v2,int len1,int len2,int max_size){
   }
 
   while(write_pos<len1+len2)
-    v1[write_pos++] = (char*)v2[read_pos++];    
+    v1[write_pos++] = (char*)v2[read_pos++];
 }
 
 
@@ -2809,7 +2809,7 @@ int main (int argc, char *argv[]){
   //get_free_mem();
   //mainpid=getpid();
   g_thread_type = MAIN_THREAD;
-    
+
   char **org_argv = argv;
 
   // remove exe name from argument list.
