@@ -136,6 +136,8 @@ static bool write_to_mp3 = false;
 static int das_lame_quality = 2; // 0 best, 9 worst.
 static int das_lame_bitrate = -1;
 static int das_lame_samplerate = 0;
+static bool write_to_ogg = false;
+static float ogg_vbr_quality = -1.0;
 static bool use_jack_transport = false;
 static bool use_jack_freewheel = false;
 static bool use_manual_connections = false;
@@ -1217,7 +1219,8 @@ static int open_soundfile(void){
       bitdepth=24;
       subformat=SF_FORMAT_PCM_24;
 #if HAVE_OGG
-    }else if(!strcasecmp("ogg",soundfile_format)){
+    }else if(!strcasecmp("ogg",soundfile_format) || write_to_ogg){
+      write_to_ogg = true;
       subformat = SF_FORMAT_VORBIS;
 #endif
     }else{
@@ -1248,6 +1251,13 @@ static int open_soundfile(void){
     fprintf (stderr, "\nCan not open sndfile \"%s\" for output (%s)\n", filename,sf_strerror(NULL));
     return 0;
   }
+
+#if HAVE_OGG
+  if (write_to_ogg && ogg_vbr_quality>=-0.1 && ogg_vbr_quality<=1.0){ // assuming quality range from libvorbis
+	  double vbr_quality = (double) ogg_vbr_quality; // convert from float to double (libvorbis uses float BTW)
+	  sf_command(soundfile, SFC_SET_VBR_ENCODING_QUALITY, &vbr_quality, sizeof(double));
+  }
+#endif
 
   hook_file_opened(filename);
 
@@ -2238,6 +2248,8 @@ static const char *advanced_help =
   "[--mp3-bitrate n] or [-mp3b n]    -> Selects mp3 bitrate (in kbit/s).\n"
   "                                     Default is set by liblame. (currently 128)\n"
   "[--mp3-samplerate n] or [-mp3s n] -> Sets output sample rate for LAME\n"
+  "[--ogg-quality n] or [-oq n]      -> Set Vorbis quality (0.0 low - 1.0 high)\n"
+  "                                     default is set by libvorbis (~0.5)\n"
   "[--write-to-stdout] or [-ws]      -> Writes 16 bit little endian to stdout. (the --format option, the\n"
   "                                     --mp3 option, and some others have no effect using this option)\n"
   "[--disable-meter] or [-dm]        -> Disable console meter.\n"
@@ -2396,6 +2408,7 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--mp3-quality","-mp3q") das_lame_quality = OPTARG_GETINT(); write_to_mp3 = true;
       OPTARG("--mp3-bitrate","-mp3b") das_lame_bitrate = OPTARG_GETINT(); write_to_mp3 = true;
 	  OPTARG("--mp3-samplerate", "-mp3s") das_lame_samplerate = OPTARG_GETINT(); write_to_mp3 = true;
+      OPTARG("--ogg-quality","-oq") ogg_vbr_quality = OPTARG_GETFLOAT(); write_to_ogg = true; soundfile_format_is_set=true; soundfile_format="ogg";
       OPTARG("--write-to-stdout","-ws") write_to_stdout=true;use_vu=false;show_bufferusage=false;
       OPTARG("--disable-meter","-dm") use_vu=false;
       OPTARG("--hide-buffer-usage","-hbu") show_bufferusage=false;
