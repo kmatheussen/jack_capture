@@ -13,7 +13,7 @@ OPTIMIZE=-O3
 #OPTIMIZE=-O0 -g
 
 COMPILEFLAGS=$(CFLAGS) $(OPTIMIZE) -DVERSION=\"$(VERSION)\" -Wall -Wextra -Wno-unused
-LINKFLAGS=$(LDFLAGS) -ljack -lsndfile -lm -lpthread
+LINKFLAGS=$(LDFLAGS) -ljack -lsndfile -lm -lpthread -latomic
 
 OS := $(shell uname)
 ifneq ($(OS),Darwin)
