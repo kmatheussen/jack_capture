@@ -37,6 +37,7 @@ FLAC
 CAF
 WVE
 OGG
+OPUS
 MPC2K
 RF64
 MP3
@@ -55,10 +56,15 @@ echo "  return("
 
 for a in $ai;do
     echo "#include <sndfile.h>" >temp.c
-    echo "main(){return SF_FORMAT_"$a";}" >>temp.c
+    case "$a" in
+        OGG) format="SF_FORMAT_OGG | SF_FORMAT_VORBIS" ;;
+        OPUS) format="SF_FORMAT_OGG | SF_FORMAT_OPUS" ;;
+        *) format="SF_FORMAT_$a" ;;
+    esac
+    echo "main(){return $format;}" >>temp.c
     echo >>temp.c
     if gcc temp.c 2>/dev/null; then
-	echo "    (!strcasecmp(\""$a"\",soundfile_format)) ? SF_FORMAT_"$a":"
+	echo "    (!strcasecmp(\""$a"\",soundfile_format)) ? $format :"
     fi
 done
 echo "    -1);"

@@ -26,7 +26,7 @@ Other features:
   writing to new files when reaching 4GB.
 
 * Supports all soundfile formats supported by sndfile.
-  (wav, aiff, ogg, flac, wavex, au, etc.)       (option: -f <format>)
+  (wav, aiff, ogg, opus, flac, wavex, au, etc.) (option: -f <format>)
 
 * Supports mp3 by using liblame.                (option: -mp3)
 
