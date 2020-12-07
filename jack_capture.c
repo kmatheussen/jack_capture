@@ -136,7 +136,6 @@ static bool write_to_mp3 = false;
 static int das_lame_quality = 2; // 0 best, 9 worst.
 static int das_lame_bitrate = -1;
 static int das_lame_samplerate = 0;
-static bool write_to_ogg_vorbis = false;
 static float ogg_vbr_quality = -1.0;
 static bool use_jack_transport = false;
 static bool use_jack_freewheel = false;
@@ -1159,7 +1158,7 @@ static int open_mp3file(void){
 
 
 static int open_soundfile(void){
-  int subformat = 0;
+  int subformat;
 
   SF_INFO sf_info; memset(&sf_info,0,sizeof(sf_info));
 
@@ -1203,7 +1202,7 @@ static int open_soundfile(void){
       sf_info.format=format;
   }
 
-  is_using_wav = (sf_info.format==SF_FORMAT_WAV)?true:false;
+  is_using_wav = ((sf_info.format & SF_FORMAT_TYPEMASK) == SF_FORMAT_WAV)?true:false;
 
   switch (bitdepth) {
   case 8: subformat = SF_FORMAT_PCM_U8;
@@ -1218,7 +1217,10 @@ static int open_soundfile(void){
     if(!strcasecmp("flac",soundfile_format) || !strcasecmp("sds",soundfile_format)){
       bitdepth=24;
       subformat=SF_FORMAT_PCM_24;
-    }else if((sf_info.format & SF_FORMAT_SUBMASK) == 0) {
+    }else if((sf_info.format & SF_FORMAT_SUBMASK)) {
+      // getformat has set subformat (SF_FORMAT_VORBIS or SF_FORMAT_OPUS).
+      subformat = sf_info.format & SF_FORMAT_SUBMASK;
+    }else{
       bitdepth=32; // sizeof(float)*8 would be incorrect in case sizeof(float)!=4
       subformat = SF_FORMAT_FLOAT;
     }
@@ -1248,9 +1250,7 @@ static int open_soundfile(void){
   }
 
 #if HAVE_OGG
-  if((sf_info.format & SF_FORMAT_SUBMASK) == SF_FORMAT_VORBIS)
-      write_to_ogg_vorbis = true;
-  if (write_to_ogg_vorbis && ogg_vbr_quality>=-0.1 && ogg_vbr_quality<=1.0){ // assuming quality range from libvorbis
+  if (subformat == SF_FORMAT_VORBIS && ogg_vbr_quality>=-0.1 && ogg_vbr_quality<=1.0){ // assuming quality range from libvorbis
 	  double vbr_quality = (double) ogg_vbr_quality; // convert from float to double (libvorbis uses float BTW)
 	  sf_command(soundfile, SFC_SET_VBR_ENCODING_QUALITY, &vbr_quality, sizeof(double));
   }
@@ -2405,7 +2405,7 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--mp3-quality","-mp3q") das_lame_quality = OPTARG_GETINT(); write_to_mp3 = true;
       OPTARG("--mp3-bitrate","-mp3b") das_lame_bitrate = OPTARG_GETINT(); write_to_mp3 = true;
 	  OPTARG("--mp3-samplerate", "-mp3s") das_lame_samplerate = OPTARG_GETINT(); write_to_mp3 = true;
-      OPTARG("--ogg-quality","-oq") ogg_vbr_quality = OPTARG_GETFLOAT(); write_to_ogg_vorbis = true; soundfile_format_is_set=true; soundfile_format="ogg";
+      OPTARG("--ogg-quality","-oq") ogg_vbr_quality = OPTARG_GETFLOAT(); soundfile_format_is_set=true; soundfile_format="ogg";
       OPTARG("--write-to-stdout","-ws") write_to_stdout=true;use_vu=false;show_bufferusage=false;
       OPTARG("--disable-meter","-dm") use_vu=false;
       OPTARG("--hide-buffer-usage","-hbu") show_bufferusage=false;
