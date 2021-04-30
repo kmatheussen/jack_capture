@@ -919,7 +919,7 @@ static void stop_helper_thread(void){
 #define vsnprintf _vsnprintf
 #endif
 #ifndef __APPLE__
-int asprintf(char **buffer, char *fmt, ...) {
+int asprintf(char **buffer, const char *fmt, ...) {
     /* Guess we need no more than 200 chars of space. */
     int size = 200;
     int nchars;
