@@ -20,7 +20,7 @@
 
 #include "das_config.h"
 
-#define _GNU_SOURCE 1
+#define _GNU_SOURCE 1 // For asprintf
 
 #include <signal.h>
 #include <stdio.h>
