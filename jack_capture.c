@@ -2503,10 +2503,9 @@ void init_arguments(int argc, char *argv[]){
   // Find filename
   {
     if(base_filename==NULL){
-      int try=0;
       base_filename=my_calloc(1,5000);
-      for(;;){
-	sprintf(base_filename,"%s%0*d.%s",filename_prefix,leading_zeros+1,++try,soundfile_format);
+      for(int try=1;try<100000;try++){
+	sprintf(base_filename,"%s%0*d.%s",filename_prefix,leading_zeros+1,try,soundfile_format);
 	if(access(base_filename,F_OK)) break;
       }
     }
