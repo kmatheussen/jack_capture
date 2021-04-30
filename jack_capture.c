@@ -1319,11 +1319,6 @@ static int rotate_file(size_t frames, int reset_totals){
   disksize=0;
 
   if (reset_totals) {
-    /* reset totals on file-rotate */
-    disk_errors = 0;
-    total_overruns = 0;
-    total_xruns = 0;
-
     if (overruns > 0) {
       print_message("jack_capture failed with a total of %d overruns.\n", total_overruns);
       print_message("   try a bigger buffer than -B %f\n",min_buffer_time);
@@ -1332,6 +1327,11 @@ static int rotate_file(size_t frames, int reset_totals){
       print_message("jack_capture failed with a total of %d disk errors.\n",disk_errors);
     if (total_xruns > 0)
       print_message("jack_capture encountered %d jack x-runs.\n", total_xruns);
+
+    /* reset totals on file-rotate */
+    disk_errors = 0;
+    total_overruns = 0;
+    total_xruns = 0;
   }
 
   if(!open_soundfile()) return 0;
