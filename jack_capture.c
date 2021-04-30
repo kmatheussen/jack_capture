@@ -20,6 +20,8 @@
 
 #include "das_config.h"
 
+#define _GNU_SOURCE 1
+
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -910,53 +912,6 @@ static void stop_helper_thread(void){
 /////////////////////////////////////////////////////////////////////
 
 
-#if !defined(__USE_GNU) && !defined(_USE_GNU)
-/* This code has been derived from an example in the glibc2 documentation.
- * "asprintf() implementation for braindamaged operating systems"
- * Copyright (C) 1991, 1994-1999, 2000, 2001 Free Software Foundation, Inc.
- */
-#ifdef _WIN32
-#define vsnprintf _vsnprintf
-#endif
-#ifndef __APPLE__
-int asprintf(char **buffer, const char *fmt, ...) {
-    /* Guess we need no more than 200 chars of space. */
-    int size = 200;
-    int nchars;
-    va_list ap;
-
-    *buffer = (char*)malloc(size);
-    if (*buffer == NULL) return -1;
-
-    /* Try to print in the allocated space. */
-    va_start(ap, fmt);
-    nchars = vsnprintf(*buffer, size, fmt, ap);
-    va_end(ap);
-
-    if (nchars >= size)
-    {
-        char *tmpbuff;
-        /* Reallocate buffer now that we know how much space is needed. */
-        size = nchars+1;
-        tmpbuff = (char*)realloc(*buffer, size);
-
-        if (tmpbuff == NULL) { /* we need to free it*/
-            free(*buffer);
-            return -1;
-        }
-
-        *buffer=tmpbuff;
-        /* Try again. */
-        va_start(ap, fmt);
-        nchars = vsnprintf(*buffer, size, fmt, ap);
-        va_end(ap);
-    }
-
-    if (nchars < 0) return nchars;
-    return size;
-}
-#endif
-#endif
 
 #define ARGS_ADD_ARGV(FMT,ARG) \
   argv=(char**) realloc((void*)argv, (argc+2)*sizeof(char*)); \
