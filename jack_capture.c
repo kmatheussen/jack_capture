@@ -910,7 +910,7 @@ static void stop_helper_thread(void){
 /////////////////////////////////////////////////////////////////////
 
 
-#ifndef __USE_GNU
+#if !defined(__USE_GNU) && !defined(_USE_GNU)
 /* This code has been derived from an example in the glibc2 documentation.
  * "asprintf() implementation for braindamaged operating systems"
  * Copyright (C) 1991, 1994-1999, 2000, 2001 Free Software Foundation, Inc.
