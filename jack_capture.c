@@ -912,10 +912,13 @@ static void stop_helper_thread(void){
 /////////////////////////////////////////////////////////////////////
 
 
-
 #define ARGS_ADD_ARGV(FMT,ARG) \
-  argv=(char**) realloc((void*)argv, (argc+2)*sizeof(char*)); \
-  asprintf(&argv[argc++], FMT, ARG); argv[argc] = 0;
+  argv = (char**) realloc((void*)argv, (argc+2)*sizeof(char*)); \
+  {                                                             \
+  int ret = asprintf(&argv[argc++], FMT, ARG);                  \
+  (void)ret;                                                    \
+  }                                                             \
+  argv[argc] = 0;
 
 #define PREPARE_ARGV(CMD,ARGC,ARGV) \
 {\

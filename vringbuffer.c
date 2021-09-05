@@ -118,7 +118,7 @@ static void* my_malloc(size_t size1,size_t size2){
 }
 
 
-static bool vringbuffer_increase_writer1(vringbuffer_t *vrb,int num_elements,bool first_call){
+static bool vringbuffer_increase_writer1(vringbuffer_t *vrb, int num_elements, bool first_call){
 
   if(num_elements+vrb->curr_num_elements > vrb->max_num_elements)
     num_elements = vrb->max_num_elements - vrb->curr_num_elements;
@@ -126,19 +126,18 @@ static bool vringbuffer_increase_writer1(vringbuffer_t *vrb,int num_elements,boo
   if(num_elements==0)
     return true;
 
+  vringbuffer_list_t *element = my_malloc(1, sizeof(vringbuffer_list_t) + (num_elements*vrb->element_size));
+  if (element==NULL)
+    return false;
+
   pthread_mutex_lock(&vrb->increase_lock);{
-    int i;
 
-    vringbuffer_list_t *element=my_malloc(1,sizeof(vringbuffer_list_t) + (num_elements*vrb->element_size));
-    element->next=vrb->allocated_mem;
-    vrb->allocated_mem=element;
+    element->next = vrb->allocated_mem;
+    vrb->allocated_mem = element;
 
-    char *das_buffer=(char*)(element+1);
+    char *das_buffer = (char*)(element+1);
     
-    if(das_buffer==NULL)
-      return false;
-
-    if(first_call){
+    if (first_call){
       // Make sure at least a certain amount of the buffer is in a cache.
       // Might create a less shocking startup.
       int num=8;
@@ -147,14 +146,14 @@ static bool vringbuffer_increase_writer1(vringbuffer_t *vrb,int num_elements,boo
       memset(das_buffer,0,num*vrb->element_size);
     }
     
-      for(i=0;i<num_elements;i++){
-        char *pointer =  das_buffer + (i*vrb->element_size);
-        jack_ringbuffer_write(vrb->for_writer1,
-                              (char*)&pointer,
-                              sizeof(char*));
-      }
+    for(int i=0 ; i<num_elements ; i++){
+      char *pointer =  das_buffer + (i*vrb->element_size);
+      jack_ringbuffer_write(vrb->for_writer1,
+                            (char*)&pointer,
+                            sizeof(char*));
+    }
 
-      vrb->curr_num_elements += num_elements;
+    vrb->curr_num_elements += num_elements;
 
   }pthread_mutex_unlock(&vrb->increase_lock);
   
