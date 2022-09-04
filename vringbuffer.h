@@ -1,11 +1,13 @@
 
 #include <stdbool.h>
-#include <unistd.h>
 
 #include <pthread.h>
 
 #include <jack/ringbuffer.h>
 
+#undef __USE_XOPEN
+#define __USE_XOPEN
+#include <unistd.h>
 
 #include "upwaker.h"
 #include "sema.h"
