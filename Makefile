@@ -12,7 +12,7 @@ CFLAGS += -I/opt/local/include
 OPTIMIZE=-O3
 #OPTIMIZE=-O0 -g
 
-COMPILEFLAGS=$(CFLAGS) $(OPTIMIZE) -DVERSION=\"$(VERSION)\" -Wall -Wextra -Wno-unused
+COMPILEFLAGS=$(CFLAGS) $(OPTIMIZE) -DVERSION=\"$(VERSION)\" -Wall -Wextra -Wno-unused -std=c99 
 LINKFLAGS=$(LDFLAGS) -ljack -lsndfile -lm -lpthread -latomic
 
 OS := $(shell uname)
