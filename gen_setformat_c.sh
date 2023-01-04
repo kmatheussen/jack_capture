@@ -61,7 +61,7 @@ for a in $ai;do
         OPUS) format="SF_FORMAT_OGG | SF_FORMAT_OPUS" ;;
         *) format="SF_FORMAT_$a" ;;
     esac
-    echo "main(){return $format;}" >>temp.c
+    echo "int main(void){return $format;}" >>temp.c
     echo >>temp.c
     if gcc temp.c 2>/dev/null; then
 	echo "    (!strcasecmp(\""$a"\",soundfile_format)) ? $format :"
