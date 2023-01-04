@@ -14,7 +14,7 @@
 
 
 echo "#include <sndfile.h>" >temp$$.c
-echo "main(){return SF_FORMAT_OGG;}" >>temp$$.c
+echo "int main(void){return SF_FORMAT_OGG;}" >>temp$$.c
 echo >>temp$$.c
 if gcc temp$$.c 2>/dev/null; then
     echo "#define HAVE_OGG 1"
@@ -24,7 +24,7 @@ fi
 
 
 echo "#include <lame/lame.h>" >temp$$.c
-echo "main(){return 0;}" >>temp$$.c
+echo "int main(void){return 0;}" >>temp$$.c
 echo >>temp$$.c
 if gcc temp$$.c -lmp3lame 2>/dev/null; then
     echo "#define HAVE_LAME 1"
@@ -35,7 +35,7 @@ fi
 
 
 echo "#include <lo/lo.h>" >temp$$.c
-echo "main(){return 0;}" >>temp$$.c
+echo "int main(void){return 0;}" >>temp$$.c
 echo >>temp$$.c
 if pkg-config --cflags --libs liblo >/dev/null 2>/dev/null && gcc temp$$.c `pkg-config --cflags --libs liblo` 2>/dev/null ; then
     echo "#define HAVE_LIBLO 1"
@@ -46,7 +46,7 @@ fi
 
 
 echo "#include <jack/jack.h>" >temp$$.c
-echo "main(){return (int)jack_port_get_latency_range;}" >>temp$$.c
+echo "int main(void){return (int)jack_port_get_latency_range;}" >>temp$$.c
 echo >>temp$$.c
 if gcc temp$$.c -ljack 2>/dev/null ; then
     echo "#define NEW_JACK_LATENCY_API 1"
