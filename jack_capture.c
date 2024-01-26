@@ -2250,7 +2250,7 @@ static const char *advanced_help =
   " All hook options take a full-path to an executable as argument.\n"
   " The commands are executed in a fire-and-forget style upon internal events.\n"
   " All output of the hooks is discarded.\n"
-  " Paramaters passed to the hook-scripts:\n"
+  " Parameters passed to the hook-scripts:\n"
   "  open:   CMD <filename>\n"
   "  close:  CMD <filename> <xrun-count> <io-error-count>\n"
   "  rotate: CMD <filename> <xrun-count> <io-error-count> <new-filename> <seq-number>\n"
