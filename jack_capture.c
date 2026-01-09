@@ -1028,8 +1028,12 @@ static void hook_file_rotated(char *oldfn, char *newfn, int num, int xruns, int 
 //////////////////////// DISK ///////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
 
-// These four variables are used in case we break the 4GB barriere for standard wav files.
-static int num_files=1;
+// 2^64 fits into 20 decimal digits.
+#define DECIMAL_INT_BYTE_MAX 20
+
+// These variables are used in case we break the 4GB barrier for standard wav files.
+static int num_files=0;
+static int rot=0;
 static int64_t disksize=0;
 static bool is_using_wav=true;
 static int bytes_per_frame;
@@ -1115,6 +1119,141 @@ static int open_mp3file(void){
 #include "setformat.c"
 
 
+/*
+ * If we were designing this functionality from scratch, we would do
+ * this differently, with more simplicity and consistency.  The
+ * following eight functions support behaviour that maintains general
+ * compatibility with the behaviour as of version 0.9.73.  There are
+ * three scenarios that need to be handled:
+ *     - prefix-based naming, without rotation
+ *     - prefix-based naming, with rotation
+ *     - user-provided base_filename naming with rotation
+ * The first scenario can turn into the second if the maximum size for
+ * a WAV file is reached.  The third is very similiar to the first,
+ * but differs by having a dot character between the prefix and the
+ * rotation number.
+ *
+ * This implementation differs from that of version 0.9.73 in the case
+ * of prefix-based naming, when the WAV size limit is reached.  In
+ * older versions, files would get a "double extension" with names
+ * like jack_capture_01.wav.01.wav.  This new implementation avoids
+ * the duplication of ".wav" because the original name was generated
+ * by this program, and we can generate a new name that does not
+ * repeat the extension.  We do not apply this "extension
+ * deduplication" to the case of a user-provided base_filename,
+ * instead treating that string as an opaque value which we do not try
+ * to examine for any sort of "extension" (which isn't a thing as far
+ * as the filesystem is concerned).  (But see the handling of
+ * soundfile_format, which still attempts to parse the provided
+ * filename for semantic information when the format is not
+ * specified.)
+ *
+ * The other functional difference from 0.9.73 is that no generated
+ * filenames will be used that overwrite an existing file.  (There is
+ * a brief race condition where a file could be overwritten, if it is
+ * created between the check for existence and the opening of the new
+ * file.  There are limits on how hard we can try to avoid overwriting
+ * existing files.)  Version 0.9.73 may overwrite existing files when
+ * rotating, despite the assertion in the documentation that "By not
+ * using this option, you will not overwrite an old file".  This
+ * implementation checks any generated filename before using it, and
+ * the only filename that should ever be overwritten is the exact name
+ * provided on the command line.
+ */
+
+
+size_t get_size_filename_prefix(void)
+{
+  // Uses globals filename_prefix and soundfile_format
+  return strlen(filename_prefix) + DECIMAL_INT_BYTE_MAX + 1 + strlen(soundfile_format) + 1;
+}
+
+
+int generate_filename_prefix(char *dest, size_t dest_size)
+{
+  // Uses globals filename_prefix, leading_zeros, num_files, and soundfile_format
+  return snprintf(dest, dest_size, "%s%0*d.%s", filename_prefix, leading_zeros, num_files, soundfile_format);
+}
+
+
+size_t get_size_filename_prefix_rotation(void)
+{
+  // Uses globals filename_prefix and soundfile_format
+  return strlen(filename_prefix) + DECIMAL_INT_BYTE_MAX + 1 + DECIMAL_INT_BYTE_MAX + 1 + strlen(soundfile_format) + 1;
+}
+
+
+int generate_filename_prefix_rotation(char *dest, size_t dest_size)
+{
+  // Uses globals filename_prefix, leading_zeros, num_files, rot, and soundfile_format
+  return snprintf(dest, dest_size, "%s%0*d.%0*d.%s", filename_prefix, leading_zeros, num_files, leading_zeros, rot, soundfile_format);
+}
+
+
+size_t get_size_base_filename_rotation(void)
+{
+  // Uses globals base_filename, leading_zeros, and soundfile_format
+  return strlen(base_filename) + DECIMAL_INT_BYTE_MAX + 1 + DECIMAL_INT_BYTE_MAX + 1 + strlen(soundfile_format) + 1;
+}
+
+
+int generate_base_filename_rotation(char *dest, size_t dest_size)
+{
+  // Uses globals base_filename, leading_zeros, rot, and soundfile_format
+  return snprintf(dest, dest_size, "%s.%0*d.%s", base_filename, leading_zeros, rot, soundfile_format);
+}
+
+
+char *find_generic_filename(int num_files_inc, int rot_inc, size_t (*size_f)(void), int(generate_f)(char *, size_t))
+{
+  // Uses globals num_files and rot
+
+  char *filename_new;
+  int buffer_size;
+  int bytes;
+
+  buffer_size = size_f();
+  filename_new = my_calloc(1, buffer_size);
+  for (int try = 1; try < 100000; try++) {
+    num_files += num_files_inc;
+    rot += rot_inc;
+    bytes = generate_f(filename_new, buffer_size);
+    if (bytes >= buffer_size) {
+      /*
+       * Fail out if the name would be truncated.  The corresponding
+       * size function is supposed to ensure this never happens, but we
+       * fail here if it does.
+       */
+      break;
+    }
+    if (access(filename_new, F_OK)) {
+      return filename_new;
+    }
+  }
+
+  free(filename_new);
+  return NULL;
+}
+
+
+char *find_rotation_filename(void)
+{
+  // Uses globals base_filename and num_files
+
+  if (base_filename) {
+    return find_generic_filename(0, 1, get_size_base_filename_rotation, generate_base_filename_rotation);
+  }
+
+  if (!num_files) {
+    // First one, find good num_files starting point.
+    return find_generic_filename(1, 0, get_size_filename_prefix_rotation, generate_filename_prefix_rotation);
+  }
+
+  // Already found our num_files value.
+  return find_generic_filename(0, 1, get_size_filename_prefix_rotation, generate_filename_prefix_rotation);
+}
+
+
 static int open_soundfile(void){
   int subformat;
 
@@ -1124,16 +1263,6 @@ static int open_soundfile(void){
 	hook_file_opened("file:///stdout");
     return 1;
 	}
-
-
-  if(filename==NULL){
-    if (rotateframe>0){ // always use .NUM. with rotation
-      filename=my_calloc(1,strlen(base_filename)+500);
-      sprintf(filename,"%s.%0*d.%s",base_filename,leading_zeros+1,0,soundfile_format);
-    }else{
-      filename=strdup(base_filename);
-    }
-  }
 
 #if HAVE_LAME
   if(write_to_mp3==true)
@@ -1265,10 +1394,13 @@ static int rotate_file(size_t frames, int reset_totals){
   sf_close(soundfile);
 
   char *filename_new;
-  filename_new=my_calloc(1,strlen(base_filename)+500);
-  sprintf(filename_new,"%s.%0*d.%s",base_filename,leading_zeros+1,num_files,soundfile_format);
+  filename_new = find_rotation_filename();
+
+  if (!filename_new) {
+      return 0;
+  }
+
   print_message("Closing %s, and continue writing to %s.\n",filename,filename_new);
-  num_files++;
 
   hook_file_rotated(filename, filename_new, num_files, total_overruns + total_xruns, disk_errors);
 
@@ -2183,7 +2315,8 @@ static const char *advanced_help =
   "[--filename-prefix s]/[-fp n]     -> Sets first part of the autogenerated filename.\n"
   "                                    (default is \"jack_capture_\")\n"
   "[--leading-zeros n] or [-z n]     -> \"n\" is the number of zeros to in the autogenerated filename.\n"
-  "                                    (-z 2 -> jack_capture_001.wav, and so on.) (default is 1)\n"
+  "                                    (-z 2 -> jack_capture_001.wav, and so on.) (default is 1, limited to\n"
+  "                                    maximum of 20)\n"
   "[--format format] or [-f format]  -> Selects fileformat provided by libsndfile.\n"
   "                                     See http://www.mega-nerd.com/libsndfile/api.html#open\n"
   "                                     This option will overwrite any format specified by the output filename.\n"
@@ -2419,6 +2552,22 @@ void init_arguments(int argc, char *argv[]){
       min_buffer_time = DEFAULT_MIN_BUFFER_TIME;
   }
 
+  /*
+   * --leading-zeros interface specification is off by one, so set it
+   * to the right value now.
+   */
+  leading_zeros += 1;
+
+  /*
+   * Limit the leading_zeros value to something reasonable.  The sprintf()
+   * formatting will accept large values, but there is no utility in
+   * allowing the padding to be longer than what is needed to represent
+   * a 64-bit number, or longer than a valid filename.
+   */
+  if (leading_zeros > DECIMAL_INT_BYTE_MAX) {
+      leading_zeros = DECIMAL_INT_BYTE_MAX;
+  }
+
   verbose_print("main() determine file format from filename\n");
   // If no format specified try to determine format from the base_filename
   if(!soundfile_format_is_set && base_filename) {
@@ -2455,20 +2604,6 @@ void init_arguments(int argc, char *argv[]){
     else
       soundfile_format=soundfile_format_one_or_two;
   }
-
-
-  verbose_print("main() find filename\n");
-  // Find filename
-  {
-    if(base_filename==NULL){
-      base_filename=my_calloc(1,5000);
-      for(int try=1;try<100000;try++){
-	sprintf(base_filename,"%s%0*d.%s",filename_prefix,leading_zeros+1,try,soundfile_format);
-	if(access(base_filename,F_OK)) break;
-      }
-    }
-  }
-
 }
 
 
@@ -2582,10 +2717,26 @@ void init_various(void){
     buffers_init();
   }
 
-  if (access(base_filename, F_OK)==0){
-    print_message("\n");
-    print_message("!!! Warning, Overwriting existing file %s !!!\n", base_filename);
-    print_message("\n");
+  if (write_to_stdout == true) {
+    filename = NULL;
+  } else {
+    if (rotateframe > 0) {
+      filename = find_rotation_filename();
+    } else if (base_filename) {
+      if (access(base_filename, F_OK)==0){
+        print_message("\n");
+        print_message("!!! Warning, Overwriting existing file %s !!!\n", base_filename);
+        print_message("\n");
+      }
+      filename = strdup(base_filename);
+    } else {
+      filename = find_generic_filename(1, 0, get_size_filename_prefix, generate_filename_prefix);
+    }
+
+    if (!filename) {
+      jack_client_close(client);
+      exit(-2);
+    }
   }
 
   verbose_print("main() Open soundfile and setup disk callback.\n");
@@ -2662,16 +2813,16 @@ void init_various(void){
         print_message(
                     "Recording to \"%s\". The recording is going\n"
                     MESSAGE_PREFIX "to last %lf seconds Press <Ctrl-C> to stop before that.\n",
-                    base_filename,
+                    filename,
                     recording_time);
     }else{
       if(silent==false) {
         if (timemachine_mode==true) {
-          print_message("Waiting to start recording of \"%s\"\n",base_filename);
+          print_message("Waiting to start recording of \"%s\"\n",filename);
           print_message("Press <Ctrl-C> to stop recording and quit.\n");
         }else
-          print_message("Recording to \"%s\". Press <Return> or <Ctrl-C> to stop.\n",base_filename);
-        //fprintf(stderr,"Recording to \"%s\". Press <Return> or <Ctrl-C> to stop.\n",base_filename);
+          print_message("Recording to \"%s\". Press <Return> or <Ctrl-C> to stop.\n",filename);
+        //fprintf(stderr,"Recording to \"%s\". Press <Return> or <Ctrl-C> to stop.\n",filename);
       }
     }
   }
