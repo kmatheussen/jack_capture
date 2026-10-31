@@ -63,7 +63,7 @@ for a in $ai;do
     esac
     echo "int main(void){return $format;}" >>temp.c
     echo >>temp.c
-    if gcc temp.c 2>/dev/null; then
+    if ${CC:-gcc} $CFLAGS temp.c $LDFLAGS 2>/dev/null; then
 	echo "    (!strcasecmp(\""$a"\",soundfile_format)) ? $format :"
     fi
 done
