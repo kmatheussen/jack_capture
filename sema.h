@@ -5,7 +5,6 @@
 
 #ifdef __APPLE__
 #include <mach/mach.h>
-#include <sys/sysinfo.h>
 #else
 #include <semaphore.h>
 #endif
