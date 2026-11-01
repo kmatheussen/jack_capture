@@ -1504,14 +1504,14 @@ static enum vringbuffer_receiver_callback_return_t disk_callback(vringbuffer_t *
       /* ok, write to file */
       FILE *file = fopen(string_concat(filename, ".tme"),"w");
       if(file) {
-	fprintf(file, "%ld.%ld\n", rtime.tv_sec, rtime.tv_nsec);
+	fprintf(file, "%ld.%09ld\n", rtime.tv_sec, rtime.tv_nsec);
 	fprintf(file, "# port-latency: %d frames\n", j_latency);
 	fprintf(file, "# sample-rate : %f samples/sec\n", jack_samplerate);
 
 	char tme[64]; struct tm time;
 	gmtime_r(&rtime.tv_sec, &time);
 	strftime(tme, 63, "%F %T", &time);
-	fprintf(file, "# system-time : %s.%ld UTC\n", tme, rtime.tv_nsec);
+	fprintf(file, "# system-time : %s.%09ld UTC\n", tme, rtime.tv_nsec);
 
 	fclose(file);
       }
