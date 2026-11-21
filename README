@@ -162,7 +162,7 @@ Additional arguments:
  All hook options take a full-path to an executable as argument.
  The commands are executed in a fire-and-forget style upon internal events.
  All output of the hooks is discarded.
- Paramaters passed to the hook-scripts:
+ Parameters passed to the hook-scripts:
   open:   CMD <filename>
   close:  CMD <filename> <xrun-count> <io-error-count>
   rotate: CMD <filename> <xrun-count> <io-error-count> <new-filename> <seq-number>
