@@ -44,6 +44,9 @@
 
 #include <sys/time.h>
 #include <sys/resource.h>
+#ifdef __APPLE__
+#include <pthread/qos.h>
+#endif
 
 #include <jack/jack.h>
 
@@ -255,6 +258,17 @@ static void* my_calloc(size_t size1,size_t size2){
 
 static bool set_high_priority(void){
   static bool shown_warning = false;
+#ifdef __APPLE__
+  // setpriority() applies to the whole process on macOS and refuses
+  // negative values without root. Raise the QoS class of the calling thread instead.
+  if(pthread_set_qos_class_self_np(QOS_CLASS_USER_INITIATED,0)==0)
+    return true;
+
+  if(shown_warning==false){
+    print_message("Warning. Could not set higher priority using pthread_set_qos_class_self_np().\n");
+    shown_warning=true; }
+  return false;
+#else
   static int  prio          = -20;
 
   while(prio<0 && setpriority(PRIO_PROCESS,0,prio)==-1)
@@ -267,7 +281,9 @@ static bool set_high_priority(void){
   if(prio < 0)
     return true;
   else
-    return false; }
+    return false;
+#endif
+}
 
 
 static int echo_turned_on=true;
